@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-title" content="Pontaj">
 <title>Pontaj</title>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
 <style>
 :root {
   --paper:  #faf8f4;
@@ -35,13 +35,39 @@
 }
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
 html,body{background:var(--c1);color:var(--ink);font-family:var(--font);height:100%;overflow:hidden;}
+
+/* ── LOGIN SCREEN ── */
+#login-screen{position:fixed;inset:0;z-index:1000;background:var(--c1);display:flex;align-items:center;justify-content:center;padding:20px;}
+.login-box{background:var(--paper);border:1px solid var(--rule);border-radius:20px;padding:36px 28px 28px;width:100%;max-width:380px;box-shadow:0 8px 32px rgba(30,26,18,.14);}
+.login-brand{font-size:18px;font-weight:600;letter-spacing:.6px;text-transform:uppercase;color:var(--ink);margin-bottom:4px;}
+.login-sub{font-size:11px;color:var(--ink3);margin-bottom:28px;letter-spacing:.3px;}
+.login-role-tabs{display:flex;background:var(--c1);border-radius:10px;padding:3px;margin-bottom:24px;border:1px solid var(--rule);}
+.ltab{flex:1;padding:9px 0;text-align:center;font-size:12px;font-weight:500;color:var(--ink3);cursor:pointer;border-radius:8px;transition:all .15s;letter-spacing:.3px;text-transform:uppercase;}
+.ltab.on{background:var(--paper);color:var(--ink);font-weight:600;box-shadow:0 1px 3px rgba(30,26,18,.1);}
+.login-form{display:none;}
+.login-form.show{display:block;}
+.lfield{margin-bottom:16px;}
+.lfield label{display:block;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:var(--ink3);margin-bottom:7px;}
+.lfield-wrap{position:relative;}
+.lfield input,.lfield select{width:100%;height:48px;background:var(--c1);border:1px solid var(--rule);border-radius:8px;color:var(--ink);font-family:var(--font);font-size:15px;padding:0 44px 0 14px;outline:none;appearance:none;-webkit-appearance:none;}
+.lfield select{padding-right:14px;}
+.lfield input:focus,.lfield select:focus{border-color:var(--acc);}
+.eye-btn{position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--ink3);padding:4px;display:flex;align-items:center;}
+.btn-login{width:100%;height:50px;background:var(--ink);color:var(--paper);border:none;border-radius:10px;font-family:var(--font);font-size:15px;font-weight:600;cursor:pointer;margin-top:8px;letter-spacing:.3px;}
+.btn-login:active{opacity:.85;}
+.login-err{color:var(--cfp);font-size:12px;margin-top:10px;min-height:16px;text-align:center;font-weight:500;}
+
+/* ── APP ── */
 #app{display:flex;flex-direction:column;height:100vh;height:100dvh;}
 
 /* ── HEADER ── */
 .hdr{padding:calc(var(--st) + 14px) 16px 0;background:var(--paper);border-bottom:1px solid var(--rule);flex-shrink:0;position:relative;z-index:10;}
 .hdr-row{display:flex;align-items:center;justify-content:space-between;padding-bottom:12px;}
 .brand{font-size:14px;font-weight:600;letter-spacing:.6px;text-transform:uppercase;color:var(--ink);}
+.hdr-right{display:flex;align-items:center;gap:8px;}
+.user-lbl{font-size:11px;color:var(--ink3);font-weight:500;letter-spacing:.3px;}
 .hbtn{height:36px;padding:0 16px;background:var(--ink);color:var(--paper);border:none;border-radius:6px;font-family:var(--font);font-size:12px;font-weight:500;cursor:pointer;letter-spacing:.3px;white-space:nowrap;-webkit-appearance:none;}
+.hbtn.ghost{background:transparent;color:var(--ink2);border:1px solid var(--rule);}
 
 /* ── TABS ── */
 .tabs{display:flex;overflow-x:auto;scrollbar-width:none;}
@@ -99,9 +125,13 @@ table.mt tr.srow td:first-child{position:sticky;left:0;z-index:2;background:var(
 table.mt tr.drow{border-bottom:1px solid var(--rule);}
 table.mt tr.drow td.ntd{position:sticky;left:0;z-index:2;background:var(--paper);padding:2px 6px 2px 10px;font-size:11px;font-weight:500;color:var(--ink);border-right:2px solid var(--rule);min-width:80px;max-width:80px;white-space:normal;word-break:break-word;line-height:1.25;}
 table.mt tr.drow:hover td.ntd{background:#f7f3ec;}
-table.mt td.dtd{padding:2px;text-align:center;border-right:1px solid var(--rule);cursor:pointer;width:42px;min-width:42px;vertical-align:middle;}
+table.mt td.dtd{padding:2px;text-align:center;border-right:1px solid var(--rule);width:42px;min-width:42px;vertical-align:middle;}
+table.mt td.dtd.clickable{cursor:pointer;}
 table.mt td.dtd.we{background:#f9f5ed;}
-table.mt td.dtd:active .cell{opacity:.7;}
+table.mt td.dtd.clickable:active .cell{opacity:.7;}
+/* Logged-in employee row highlight */
+table.mt tr.my-row td.ntd{background:#e8f0ff !important;border-left:3px solid var(--co);}
+table.mt tr.my-row:hover td.ntd{background:#d8e8ff !important;}
 
 .cell{height:44px;border-radius:5px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:10px;font-weight:600;padding:2px;}
 .cell.empty{color:var(--ink4);}
@@ -139,7 +169,6 @@ table.mt tr.trow td:first-child{text-align:left;padding-left:10px;font-family:va
 .pk-head{padding:14px 18px 12px;border-bottom:1px solid var(--rule);}
 .pk-emp{font-size:16px;font-weight:600;color:var(--ink);}
 .pk-date{font-size:12px;color:var(--ink3);margin-top:3px;}
-
 .wh-sec{padding:16px 18px 8px;transition:opacity .2s;}
 .wh-sec.dim{opacity:.3;pointer-events:none;}
 .wh-lbl{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:var(--ink3);margin-bottom:10px;}
@@ -152,21 +181,17 @@ table.mt tr.trow td:first-child{text-align:left;padding-left:10px;font-family:va
 .wh-row::before,.wh-row::after{content:'';position:absolute;left:0;right:0;height:38px;pointer-events:none;z-index:1;}
 .wh-row::before{top:57px;border-top:1px solid var(--rule);}
 .wh-row::after{top:95px;border-bottom:1px solid var(--rule);}
-
 .computed{margin:8px 18px 14px;background:var(--c2);border-radius:8px;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;transition:opacity .2s;}
 .computed.dim{opacity:.3;}
 .comp-lbl{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--ink2);}
 .comp-val{font-family:var(--mono);font-size:24px;font-weight:600;color:var(--ink);}
 .comp-u{font-size:12px;color:var(--ink3);margin-left:4px;}
-
 .codes{padding:0 18px 14px;}
 .codes-lbl{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:var(--ink3);margin-bottom:10px;}
 .cgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
 .cbtn{height:52px;border-radius:8px;border:2px solid transparent;font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;letter-spacing:.2px;-webkit-appearance:none;transition:border-color .12s,filter .1s;}
 .cbtn:active{filter:brightness(.9);}
 .cbtn.sel{border-color:currentColor;}
-
-/* ── CO APPROVAL ── */
 .co-appr{display:none;padding:0 18px 16px;animation:fadeIn .15s ease;}
 .co-appr.show{display:block;}
 .appr-lbl{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:var(--ink3);margin-bottom:10px;}
@@ -175,7 +200,6 @@ table.mt tr.trow td:first-child{text-align:left;padding-left:10px;font-family:va
 .appr-btn.appr-yes{background:var(--co-bg);color:var(--co);}
 .appr-btn.appr-no{background:var(--con-bg);color:var(--con);}
 .appr-btn.sel{border-color:currentColor;}
-
 .pk-acts{display:flex;gap:10px;padding:0 18px 8px;}
 .btn-apply{flex:1;height:50px;background:var(--ink);color:var(--paper);border:none;border-radius:8px;font-family:var(--font);font-size:15px;font-weight:500;cursor:pointer;-webkit-appearance:none;}
 .btn-clear{height:50px;padding:0 18px;background:var(--c2);color:var(--ink2);border:none;border-radius:8px;font-family:var(--font);font-size:15px;cursor:pointer;-webkit-appearance:none;}
@@ -207,19 +231,68 @@ table.mt tr.trow td:first-child{text-align:left;padding-left:10px;font-family:va
   .msheet{border-radius:18px;max-width:440px;width:100%;transform:translateY(12px) scale(0.97);border:1px solid var(--rule);padding-bottom:20px;}
   .ovl.open .msheet{transform:none;}
   .pk-handle,.mhandle{display:none;}
-  table.mt td.dtd:hover .cell{filter:brightness(0.93);}
+  table.mt td.dtd.clickable:hover .cell{filter:brightness(0.93);}
   .emp-sec-wrap{display:grid;grid-template-columns:1fr 1fr;gap:0 14px;}
 }
 </style>
 </head>
 <body>
-<div id="app">
 
-<!-- HEADER -->
+<!-- ── LOGIN SCREEN ── -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-brand">Pontaj Bucatarie</div>
+    <div class="login-sub">Autentificare necesara</div>
+    <div class="login-role-tabs">
+      <div class="ltab on" onclick="switchLoginTab('angajat')">Angajat</div>
+      <div class="ltab"    onclick="switchLoginTab('admin')">Admin</div>
+    </div>
+
+    <!-- Angajat form -->
+    <div class="login-form show" id="lf-angajat">
+      <div class="lfield">
+        <label>Selecteaza angajat</label>
+        <div class="lfield-wrap">
+          <select id="l-emp-sel"></select>
+        </div>
+      </div>
+      <div class="lfield">
+        <label>Parola</label>
+        <div class="lfield-wrap">
+          <input id="l-emp-pass" type="password" placeholder="••••••" autocomplete="current-password">
+          <button class="eye-btn" type="button" onclick="toggleEye('l-emp-pass',this)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
+        </div>
+      </div>
+      <button class="btn-login" onclick="loginEmp()">Intra</button>
+    </div>
+
+    <!-- Admin form -->
+    <div class="login-form" id="lf-admin">
+      <div class="lfield">
+        <label>Parola admin</label>
+        <div class="lfield-wrap">
+          <input id="l-admin-pass" type="password" placeholder="••••••" autocomplete="current-password">
+          <button class="eye-btn" type="button" onclick="toggleEye('l-admin-pass',this)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
+        </div>
+      </div>
+      <button class="btn-login" onclick="loginAdmin()">Intra</button>
+    </div>
+
+    <div class="login-err" id="login-err"></div>
+  </div>
+</div>
+
+<!-- ── APP ── -->
+<div id="app" style="display:none">
+
 <div class="hdr">
   <div class="hdr-row">
     <div class="brand">Pontaj Bucatarie</div>
-    <button class="hbtn" id="hbtn" onclick="headerAct()" style="display:none">+ Angajat</button>
+    <div class="hdr-right">
+      <span class="user-lbl" id="user-lbl"></span>
+      <button class="hbtn ghost" onclick="logout()">Iesi</button>
+      <button class="hbtn" id="hbtn" onclick="headerAct()" style="display:none">+ Angajat</button>
+    </div>
   </div>
   <div class="tabs">
     <div class="tab on"  onclick="goTab('lunar')">Lunar</div>
@@ -228,22 +301,19 @@ table.mt tr.trow td:first-child{text-align:left;padding-left:10px;font-family:va
   </div>
 </div>
 
-<!-- CONTENT -->
 <div class="content">
 
-  <!-- PROGRAM LUNAR -->
   <div id="pg-lunar" class="page on">
     <div class="mnav">
       <button class="mnav-btn" onclick="shiftM(-1)">&#8249;</button>
       <div class="mnav-lbl" id="lbl-l">—</div>
       <button class="mnav-btn" onclick="shiftM(1)">&#8250;</button>
-      <button class="mnav-act" onclick="doXLSX()">Descarca XLSX</button>
+      <button class="mnav-act" id="xlsx-btn" onclick="doXLSX()">Descarca XLSX</button>
     </div>
     <div class="leg" id="leg"></div>
     <div class="tscroll"><table class="mt" id="tbl-l"></table></div>
   </div>
 
-  <!-- PROGRAM SAPTAMANAL -->
   <div id="pg-saptamanal" class="page">
     <div class="mnav">
       <button class="mnav-btn" onclick="shiftW(-1)">&#8249;</button>
@@ -254,12 +324,11 @@ table.mt tr.trow td:first-child{text-align:left;padding-left:10px;font-family:va
     <div class="tscroll"><table class="mt" id="tbl-s"></table></div>
   </div>
 
-  <!-- ANGAJATI -->
   <div id="pg-angajati" class="page">
     <div id="emp-list"></div>
   </div>
 
-</div><!-- /content -->
+</div>
 
 <!-- PICKER -->
 <div class="pkovl" id="pkovl">
@@ -333,6 +402,7 @@ table.mt tr.trow td:first-child{text-align:left;padding-left:10px;font-family:va
 </div>
 
 <div class="toast" id="toast"></div>
+</div><!-- /app -->
 
 <script>
 // ── CONFIG ──────────────────────────────────────────────
@@ -351,45 +421,57 @@ const DS = ['L','M','Mi','J','V','S','D'];
 const DF = ['Luni','Marti','Miercuri','Joi','Vineri','Sambata','Duminica'];
 const SH = [6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22];
 const EH = [8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,0,1,2];
+const ADMIN_PASS = 'Pontaj@2026';
 
 // ── STATE ────────────────────────────────────────────────
 let S = (() => {
   try{const s=localStorage.getItem('pt6');if(s)return JSON.parse(s);}catch(e){}
   return {
     emps:[
-      {id:'1',name:'IONUT BALASA',sec:'CALD'},
-      {id:'2',name:'ALEXANDRU PARASCHIV',sec:'CALD'},
-      {id:'3',name:'BOGDAN MORARU ALEXA',sec:'CALD'},
-      {id:'4',name:'MATEI STELIAN ALEXANDRU',sec:'CALD'},
-      {id:'5',name:'DIONIS DEMIAN DENIS',sec:'RECE'},
-      {id:'6',name:'JAMANDI MARIUS GHEORGHE',sec:'RECE'},
-      {id:'7',name:'ANDREI',sec:'RECE'},
-      {id:'8',name:'CORNELIA',sec:'RECE'},
-      {id:'9',name:'MIHAI',sec:'COFETARIE'},
-      {id:'10',name:'IULIAN GAGIU GEORGE',sec:'GRATAR'},
-      {id:'11',name:'LEONARD MOISOI',sec:'GRATAR'},
-      {id:'12',name:'DAMBAR',sec:'VASE'},
-      {id:'13',name:'BITICA MIRELA',sec:'VASE'},
-      {id:'14',name:'DANI ARMEANCA',sec:'ALTELE'},
+      {id:'1', name:'IONUT BALASA',             sec:'CALD',      pass:'ionut'},
+      {id:'2', name:'ALEXANDRU PARASCHIV',       sec:'CALD',      pass:'alex'},
+      {id:'3', name:'BOGDAN MORARU ALEXA',       sec:'CALD',      pass:'bogdan'},
+      {id:'4', name:'MATEI STELIAN ALEXANDRU',   sec:'CALD',      pass:'matei'},
+      {id:'5', name:'DIONIS DEMIAN DENIS',       sec:'RECE',      pass:'dionis'},
+      {id:'6', name:'JAMANDI MARIUS GHEORGHE',   sec:'RECE',      pass:'jamandi'},
+      {id:'7', name:'ANDREI',                    sec:'RECE',      pass:'andrei'},
+      {id:'8', name:'CORNELIA',                  sec:'RECE',      pass:'cornelia'},
+      {id:'9', name:'MIHAI',                     sec:'COFETARIE', pass:'mihai'},
+      {id:'10',name:'IULIAN GAGIU GEORGE',        sec:'GRATAR',    pass:'iulian'},
+      {id:'11',name:'LEONARD MOISOI',            sec:'GRATAR',    pass:'leonard'},
+      {id:'12',name:'DAMBAR',                    sec:'VASE',      pass:'dambar'},
+      {id:'13',name:'BITICA MIRELA',             sec:'VASE',      pass:'mirela'},
+      {id:'14',name:'DANI ARMEANCA',             sec:'ALTELE',    pass:'dani'},
     ],
     cells:{}
   };
 })();
 const persist = () => localStorage.setItem('pt6',JSON.stringify(S));
 
-let lY=new Date().getFullYear(), lM=new Date().getMonth();
-let curTab='lunar', editId=null, pkKey=null;
-let pkSelCode=null, pkCoAppr=null;
+function defaultPass(name){return name.split(' ')[0].toLowerCase();}
+
+// ── AUTH STATE ───────────────────────────────────────────
+let currentUser = (() => {
+  try{
+    const u=sessionStorage.getItem('ptUser');if(!u)return null;
+    const p=JSON.parse(u);
+    if(p.role==='employee'&&!S.emps.find(e=>e.id===p.id))return null;
+    return p;
+  }catch(e){return null;}
+})();
+const isAdmin = ()=>currentUser&&currentUser.role==='admin';
+const isEmp   = ()=>currentUser&&currentUser.role==='employee';
 
 // ── WEEK STATE ───────────────────────────────────────────
-function mondayOf(d){
-  const dt=new Date(d); dt.setHours(0,0,0,0);
-  const day=(dt.getDay()+6)%7; dt.setDate(dt.getDate()-day); return dt;
-}
+function mondayOf(d){const dt=new Date(d);dt.setHours(0,0,0,0);const day=(dt.getDay()+6)%7;dt.setDate(dt.getDate()-day);return dt;}
 let sDate=mondayOf(new Date());
 function getWeekDays(){const days=[];for(let i=0;i<7;i++){const d=new Date(sDate);d.setDate(d.getDate()+i);days.push(d);}return days;}
 function shiftW(n){sDate.setDate(sDate.getDate()+n*7);renderSaptamanal();}
 function goToday(){sDate=mondayOf(new Date());renderSaptamanal();}
+
+let lY=new Date().getFullYear(), lM=new Date().getMonth();
+let curTab='lunar', editId=null, pkKey=null;
+let pkSelCode=null, pkCoAppr=null;
 
 // ── HELPERS ──────────────────────────────────────────────
 const ck  = (eid,y,m,d)=>`${eid}-${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
@@ -425,14 +507,78 @@ function mStats(y,m){
   S.emps.forEach(e=>{
     let h=0,sp=0,spp=0,co=0,cfp=0;
     for(let d=1;d<=days;d++){
-      const c=S.cells[ck(e.id,y,m,d)];
-      if(!c)continue;
+      const c=S.cells[ck(e.id,y,m,d)];if(!c)continue;
       if(c.type==='interval')h+=ch(c.s,c.e);
       if(c.type==='code'){if(c.code==='SP')sp++;if(c.code==='SP+')spp++;if(c.code==='CO')co++;if(c.code==='CFP')cfp++;}
     }
     res[e.id]={h,sp,spp,co,cfp};
   });
   return res;
+}
+
+// ── LOGIN ────────────────────────────────────────────────
+function switchLoginTab(role){
+  document.querySelectorAll('.ltab').forEach((el,i)=>el.classList.toggle('on',['angajat','admin'][i]===role));
+  document.getElementById('lf-angajat').classList.toggle('show',role==='angajat');
+  document.getElementById('lf-admin').classList.toggle('show',role==='admin');
+  document.getElementById('login-err').textContent='';
+}
+
+function populateLoginSelect(){
+  const sel=document.getElementById('l-emp-sel');
+  sel.innerHTML='<option value="">-- Selecteaza angajat --</option>';
+  S.emps.forEach(e=>{const o=document.createElement('option');o.value=e.id;o.textContent=e.name;sel.appendChild(o);});
+}
+
+function toggleEye(inputId,btn){
+  const inp=document.getElementById(inputId);
+  const show=inp.type==='password';
+  inp.type=show?'text':'password';
+  btn.innerHTML=show
+    ?'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>'
+    :'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
+}
+
+function loginEmp(){
+  const id=document.getElementById('l-emp-sel').value;
+  const pass=document.getElementById('l-emp-pass').value;
+  const emp=S.emps.find(e=>e.id===id);
+  if(!emp){document.getElementById('login-err').textContent='Selecteaza un angajat.';return;}
+  const correct=emp.pass||defaultPass(emp.name);
+  if(pass!==correct){document.getElementById('login-err').textContent='Parola incorecta.';return;}
+  currentUser={role:'employee',id:emp.id,name:emp.name};
+  sessionStorage.setItem('ptUser',JSON.stringify(currentUser));
+  showApp();
+}
+
+function loginAdmin(){
+  const pass=document.getElementById('l-admin-pass').value;
+  if(pass!==ADMIN_PASS){document.getElementById('login-err').textContent='Parola incorecta.';return;}
+  currentUser={role:'admin'};
+  sessionStorage.setItem('ptUser',JSON.stringify(currentUser));
+  showApp();
+}
+
+function logout(){
+  currentUser=null;sessionStorage.removeItem('ptUser');
+  document.getElementById('app').style.display='none';
+  document.getElementById('login-screen').style.display='';
+  document.getElementById('l-emp-pass').value='';
+  document.getElementById('l-admin-pass').value='';
+  document.getElementById('login-err').textContent='';
+  populateLoginSelect();
+}
+
+function showApp(){
+  document.getElementById('login-screen').style.display='none';
+  document.getElementById('app').style.display='';
+  // Update user label
+  document.getElementById('user-lbl').textContent=isAdmin()?'Admin':currentUser.name.split(' ')[0];
+  // XLSX only for admin
+  document.getElementById('xlsx-btn').style.display=isAdmin()?'':'none';
+  // + Angajat only for admin
+  document.getElementById('hbtn').style.display='none'; // goTab will handle this
+  goTab('lunar');
 }
 
 // ── RENDER ANGAJATI ─────────────────────────────────────
@@ -459,6 +605,15 @@ function renderEmps(){
       if(s.co)parts.push(`<span class="emsv" style="color:var(--co)"><b>${s.co}</b>CO</span>`);
       if(s.cfp)parts.push(`<span class="emsv" style="color:var(--cfp)"><b>${s.cfp}</b>CFP</span>`);
       const statsHtml=parts.length?`<div class="emp-mini-stats">${parts.join('')}</div>`:'';
+      const actions=isAdmin()?`<div class="emp-actions">
+          <button class="act-icon" onclick="openEdit('${e.id}')" aria-label="Editeaza"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+          <button class="act-icon red" onclick="askDel('${e.id}')" aria-label="Sterge"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>
+        </div>
+        <div class="del-confirm" id="dc-${e.id}">
+          <div class="del-msg">Stergi angajatul?</div>
+          <button class="del-no" onclick="cancelDel('${e.id}')">Nu</button>
+          <button class="del-yes" onclick="confirmDel('${e.id}')">Da, sterge</button>
+        </div>`:'';
       html+=`<div class="emp-card" id="card-${e.id}">
         <div class="emp-mono" style="color:${st.c};background:${st.bg}">${ini(e.name)}</div>
         <div class="emp-info">
@@ -466,15 +621,7 @@ function renderEmps(){
           <div class="emp-sec-lbl">${SEC_LBL[sec]}</div>
           ${statsHtml}
         </div>
-        <div class="emp-actions">
-          <button class="act-icon" onclick="openEdit('${e.id}')" aria-label="Editeaza"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
-          <button class="act-icon red" onclick="askDel('${e.id}')" aria-label="Sterge"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>
-        </div>
-        <div class="del-confirm" id="dc-${e.id}">
-          <div class="del-msg">Stergi angajatul?</div>
-          <button class="del-no"  onclick="cancelDel('${e.id}')">Nu</button>
-          <button class="del-yes" onclick="confirmDel('${e.id}')">Da, sterge</button>
-        </div>
+        ${actions}
       </div>`;
     });
     html+=`</div></div>`;
@@ -483,10 +630,7 @@ function renderEmps(){
   document.getElementById('emp-list').innerHTML=html;
 }
 
-function askDel(id){
-  document.querySelectorAll('.del-confirm.show').forEach(el=>el.classList.remove('show'));
-  document.getElementById(`dc-${id}`).classList.add('show');
-}
+function askDel(id){document.querySelectorAll('.del-confirm.show').forEach(el=>el.classList.remove('show'));document.getElementById(`dc-${id}`).classList.add('show');}
 function cancelDel(id){document.getElementById(`dc-${id}`).classList.remove('show');}
 function confirmDel(id){
   S.emps=S.emps.filter(e=>e.id!==id);
@@ -517,14 +661,13 @@ function renderLunar(){
     tb+=`<tr class="srow"><td colspan="${days+6}" style="color:${st.c}">${SEC_LBL[sec]}</td></tr>`;
     emps.forEach(e=>{
       let h=0,sp=0,spp=0,co=0,cfp=0;
-      tb+=`<tr class="drow"><td class="ntd">${e.name}</td>`;
+      const isMe=isEmp()&&currentUser.id===e.id;
+      tb+=`<tr class="drow${isMe?' my-row':''}"><td class="ntd">${e.name}</td>`;
       for(let d=1;d<=days;d++){
         const w=dow(y,m,d);const key=ck(e.id,y,m,d);const cell=S.cells[key];const dis=cellDisp(cell);
-        if(cell){
-          if(cell.type==='interval')h+=ch(cell.s,cell.e);
-          if(cell.type==='code'){if(cell.code==='SP')sp++;if(cell.code==='SP+')spp++;if(cell.code==='CO')co++;if(cell.code==='CFP')cfp++;}
-        }
-        tb+=`<td class="dtd${w>=5?' we':''}" onclick="openPk('${key}','${e.id}',${y},${m},${d},'${e.name.replace(/'/g,"\\'")}')">
+        if(cell){if(cell.type==='interval')h+=ch(cell.s,cell.e);if(cell.type==='code'){if(cell.code==='SP')sp++;if(cell.code==='SP+')spp++;if(cell.code==='CO')co++;if(cell.code==='CFP')cfp++;}}
+        const click=isAdmin()?`onclick="openPk('${key}','${e.id}',${y},${m},${d},'${e.name.replace(/'/g,"\\'")}')"`:'';
+        tb+=`<td class="dtd${w>=5?' we':''}${isAdmin()?' clickable':''}" ${click}>
           <div class="cell ${dis.cls}"><div class="cell-h">${dis.h||'·'}</div>${dis.iv?`<div class="cell-iv">${dis.iv}</div>`:''}</div></td>`;
       }
       tH+=h;tSP+=sp;tSPP+=spp;tCO+=co;tCFP+=cfp;
@@ -544,12 +687,10 @@ function renderSaptamanal(){
   else lbl+=' – '+d6.getDate()+' '+MO[d6.getMonth()];
   lbl+=' '+d6.getFullYear();
   document.getElementById('lbl-s').textContent=lbl;
-  const today=new Date();
-  const g=grp();
+  const today=new Date();const g=grp();
   let th=`<thead><tr><th class="nth">Angajat</th>`;
   days.forEach(date=>{
-    const w=(date.getDay()+6)%7;
-    const isToday=date.toDateString()===today.toDateString();
+    const w=(date.getDay()+6)%7;const isToday=date.toDateString()===today.toDateString();
     th+=`<th class="dth${w>=5?' weth':''}"${isToday?' style="background:var(--acc);color:var(--paper)"':''}>${DS[w]}<br><span style="font-weight:400;font-size:7px">${date.getDate()}</span></th>`;
   });
   th+=`<th class="sth">Ore</th></tr></thead>`;
@@ -560,13 +701,14 @@ function renderSaptamanal(){
     tb+=`<tr class="srow"><td colspan="9" style="color:${st.c}">${SEC_LBL[sec]}</td></tr>`;
     emps.forEach(e=>{
       let h=0;
-      tb+=`<tr class="drow"><td class="ntd">${e.name}</td>`;
+      const isMe=isEmp()&&currentUser.id===e.id;
+      tb+=`<tr class="drow${isMe?' my-row':''}"><td class="ntd">${e.name}</td>`;
       days.forEach(date=>{
         const y=date.getFullYear(),m=date.getMonth(),d=date.getDate();
-        const w=(date.getDay()+6)%7;
-        const key=ck(e.id,y,m,d);const cell=S.cells[key];const dis=cellDisp(cell);
+        const w=(date.getDay()+6)%7;const key=ck(e.id,y,m,d);const cell=S.cells[key];const dis=cellDisp(cell);
         if(cell&&cell.type==='interval')h+=ch(cell.s,cell.e);
-        tb+=`<td class="dtd${w>=5?' we':''}" onclick="openPk('${key}','${e.id}',${y},${m},${d},'${e.name.replace(/'/g,"\\'")}')">
+        const click=isAdmin()?`onclick="openPk('${key}','${e.id}',${y},${m},${d},'${e.name.replace(/'/g,"\\'")}')"`:'';
+        tb+=`<td class="dtd${w>=5?' we':''}${isAdmin()?' clickable':''}" ${click}>
           <div class="cell ${dis.cls}"><div class="cell-h">${dis.h||'·'}</div>${dis.iv?`<div class="cell-iv">${dis.iv}</div>`:''}</div></td>`;
       });
       tb+=`<td class="std">${h||'—'}</td></tr>`;
@@ -576,73 +718,201 @@ function renderSaptamanal(){
   document.getElementById('tbl-s').innerHTML=th+tb;
 }
 
-// ── EXPORT XLSX ─────────────────────────────────────────
-function doXLSX(){
-  const y=lY,m=lM,days=dim(y,m);const g=grp();const wb2=XLSX.utils.book_new();
-  const pr=[['Program '+MO[m]+' '+y],[]];
-  const h1=['Angajat','Sectie'];
-  for(let d=1;d<=days;d++)h1.push(`${DS[dow(y,m,d)]} ${d}`);
-  h1.push('Total Ore','SP','SP+','CO','CFP');pr.push(h1);
+// ── EXPORT XLSX (ExcelJS) ─────────────────────────────────
+async function doXLSX(){
+  if(!isAdmin())return;
+  toast('Se genereaza...');
+  const y=lY,m=lM,days=dim(y,m);const g=grp();
+  const wb=new ExcelJS.Workbook();
+  wb.creator='Pontaj Bucatarie';wb.created=new Date();
+
+  // Color palette (ARGB)
+  const C={
+    paper:'FFFAF8F4',c1:'FFF2EDE3',c2:'FFE8E0D0',c3:'FFDDD4C0',rule:'FFD0C8B4',
+    ink:'FF1E1A12',ink2:'FF5A5040',ink3:'FF9A8E78',ink4:'FFC8BCAA',
+    spBg:'FFE6F3EC',sp:'FF1E5C38',sppBg:'FFFDEEDD',spp:'FF6B3200',
+    coBg:'FFDAEAF8',co:'FF14446E',conBg:'FFFFF5D6',con:'FF7A5500',
+    cfpBg:'FFFCE8E8',cfp:'FF7A1818',offBg:'FFEEEBE4',off:'FF6A6258',
+    weBg:'FFF5F0E6',
+    secs:{
+      CALD:      {bg:'FFFEF3E2',c:'FF7A4800'},
+      RECE:      {bg:'FFE8F4FD',c:'FF14446E'},
+      COFETARIE: {bg:'FFF3E5F5',c:'FF6A1B9A'},
+      GRATAR:    {bg:'FFE8F5E9',c:'FF1B5E20'},
+      VASE:      {bg:'FFFFF3E0',c:'FFC65000'},
+      ALTELE:    {bg:'FFF0ECE3',c:'FF5A5040'},
+    }
+  };
+  const fill=a=>({type:'pattern',pattern:'solid',fgColor:{argb:a}});
+  const fnt=(a,bold=false,size=10)=>({name:'Calibri',color:{argb:a},bold,size});
+  const bdr=(s='thin')=>({style:s,color:{argb:C.rule}});
+  const bdrAll=(s='thin')=>({top:bdr(s),bottom:bdr(s),left:bdr(s),right:bdr(s)});
+  const aln=(h,v='middle',wrap=false)=>({horizontal:h,vertical:v,wrapText:wrap});
+
+  function cellStyle(c){
+    if(!c)return{bg:C.paper,fg:C.ink4,bold:false};
+    if(c.type==='interval')return{bg:C.c1,fg:C.ink,bold:true};
+    if(c.type==='code'){
+      const m2={SP:{bg:C.spBg,fg:C.sp},'SP+':{bg:C.sppBg,fg:C.spp},CFP:{bg:C.cfpBg,fg:C.cfp},OFF:{bg:C.offBg,fg:C.off}};
+      if(c.code==='CO')return c.approved===false?{bg:C.conBg,fg:C.con,bold:false}:{bg:C.coBg,fg:C.co,bold:false};
+      return m2[c.code]||{bg:C.paper,fg:C.ink,bold:false};
+    }
+    return{bg:C.paper,fg:C.ink,bold:false};
+  }
+  function cellVal(c){
+    if(!c)return'';
+    if(c.type==='interval')return`${p2(c.s)}-${p2(c.e)} (${ch(c.s,c.e)}h)`;
+    if(c.type==='code'){if(c.code==='CO')return c.approved===false?'CO (N)':c.approved===true?'CO (A)':'CO';return c.code;}
+    return'';
+  }
+
+  // ── Sheet 1: Program ──────────────────────────────────
+  const ws1=wb.addWorksheet('Program '+MO[m]);
+  ws1.properties.defaultRowHeight=22;
+  const colCount=days+7;
+  ws1.columns=[{width:22},{width:11},...Array(days).fill({width:7}),{width:9},{width:6},{width:6},{width:6},{width:6}];
+
+  // Title
+  const tR=ws1.addRow(['Program '+MO[m]+' '+y]);
+  tR.height=30;ws1.mergeCells(1,1,1,colCount);
+  const tC=tR.getCell(1);tC.fill=fill(C.c2);tC.font=fnt(C.ink,true,13);tC.alignment=aln('left');
+  ws1.addRow([]);
+
+  // Header
+  const hArr=['Angajat','Sectie'];
+  for(let d=1;d<=days;d++){const w=dow(y,m,d);hArr.push(`${DS[w]}${d}`);}
+  hArr.push('Ore','SP','SP+','CO','CFP');
+  const hR=ws1.addRow(hArr);hR.height=28;
+  hR.eachCell((cell,col)=>{
+    cell.fill=fill(C.c2);cell.font=fnt(C.ink2,true,9);
+    cell.alignment=col<=2?aln('left'):aln('center');cell.border=bdrAll();
+  });
+  // Weekend column shading in header
+  for(let d=1;d<=days;d++){if(dow(y,m,d)>=5){const hc=hR.getCell(d+2);hc.font=fnt('FF6B4F1A',true,9);}}
+
+  // Data
   SEC_ORDER.forEach(sec=>{
     const emps=g[sec];if(!emps||!emps.length)return;
-    pr.push([SEC_LBL[sec]]);
+    const sc=C.secs[sec];
+    // Section row
+    const sR=ws1.addRow([SEC_LBL[sec]]);sR.height=17;
+    ws1.mergeCells(sR.number,1,sR.number,colCount);
+    sR.getCell(1).fill=fill(sc.bg);sR.getCell(1).font=fnt(sc.c,true,9);sR.getCell(1).alignment=aln('left');
+
     emps.forEach(e=>{
-      const row=[e.name,SEC_LBL[sec]];let h=0,sp=0,spp=0,co=0,cfp=0;
+      let h=0,sp=0,spp=0,co=0,cfp=0;
+      const rowData=[e.name,SEC_LBL[sec]];
       for(let d=1;d<=days;d++){
         const c=S.cells[ck(e.id,y,m,d)];
-        if(!c){row.push('');continue;}
-        if(c.type==='interval'){const hrs=ch(c.s,c.e);row.push(`${p2(c.s)}-${p2(c.e)} (${hrs}h)`);h+=hrs;}
-        else{
-          let label=c.code;
-          if(c.code==='CO')label=c.approved===false?'CO(N)':c.approved===true?'CO(A)':'CO';
-          row.push(label);
-          if(c.code==='SP')sp++;if(c.code==='SP+')spp++;if(c.code==='CO')co++;if(c.code==='CFP')cfp++;
-        }
+        if(!c){rowData.push('');continue;}
+        rowData.push(cellVal(c));
+        if(c.type==='interval')h+=ch(c.s,c.e);
+        else{if(c.code==='SP')sp++;if(c.code==='SP+')spp++;if(c.code==='CO')co++;if(c.code==='CFP')cfp++;}
       }
-      row.push(h,sp,spp,co,cfp);pr.push(row);
+      rowData.push(h||'',sp||'',spp||'',co||'',cfp||'');
+      const dR=ws1.addRow(rowData);dR.height=22;
+      // Name
+      dR.getCell(1).fill=fill(C.paper);dR.getCell(1).font=fnt(C.ink,false,10);dR.getCell(1).alignment=aln('left');dR.getCell(1).border=bdrAll();
+      // Sectie
+      dR.getCell(2).fill=fill(sc.bg);dR.getCell(2).font=fnt(sc.c,false,9);dR.getCell(2).alignment=aln('center');dR.getCell(2).border=bdrAll();
+      // Day cells
+      for(let d=1;d<=days;d++){
+        const cell=dR.getCell(d+2);const c=S.cells[ck(e.id,y,m,d)];
+        const cs=cellStyle(c);const isWe=dow(y,m,d)>=5;
+        cell.fill=fill(c?cs.bg:isWe?C.weBg:C.paper);
+        cell.font=fnt(cs.fg,cs.bold,9);cell.alignment=aln('center');cell.border=bdrAll();
+      }
+      // Summary cells
+      const sumColors=[null,{bg:C.spBg,fg:C.sp},{bg:C.sppBg,fg:C.spp},{bg:C.coBg,fg:C.co},{bg:C.cfpBg,fg:C.cfp}];
+      for(let i=0;i<5;i++){
+        const cell=dR.getCell(days+3+i);
+        if(i===0){cell.fill=fill(C.c2);cell.font=fnt(C.ink,true,10);}
+        else{const sc2=sumColors[i];cell.fill=fill(C.c2);cell.font=fnt(sc2.fg,false,10);}
+        cell.alignment=aln('center');cell.border=bdrAll();
+      }
     });
   });
-  const ws1=XLSX.utils.aoa_to_sheet(pr);
-  ws1['!cols']=[{wch:24},{wch:12},...Array(days).fill({wch:11}),{wch:9},{wch:5},{wch:5},{wch:5},{wch:5}];
-  XLSX.utils.book_append_sheet(wb2,ws1,'Program '+MO[m]);
+
+  // Total row
+  let tH=0,tSP=0,tSPP=0,tCO=0,tCFP=0;
+  S.emps.forEach(e=>{for(let d=1;d<=days;d++){const c=S.cells[ck(e.id,y,m,d)];if(!c)continue;if(c.type==='interval')tH+=ch(c.s,c.e);if(c.type==='code'){if(c.code==='SP')tSP++;if(c.code==='SP+')tSPP++;if(c.code==='CO')tCO++;if(c.code==='CFP')tCFP++;}}});
+  const totR=ws1.addRow(['TOTAL','',...Array(days).fill(''),tH||'—',tSP||'—',tSPP||'—',tCO||'—',tCFP||'—']);
+  totR.height=26;
+  totR.eachCell((cell,col)=>{
+    cell.fill=fill(C.c3);cell.font=fnt(C.ink,true,10);
+    cell.alignment=col<=2?aln('left'):aln('center');
+    cell.border={top:{style:'medium',color:{argb:C.ink3}},bottom:bdr(),left:bdr(),right:bdr()};
+  });
+  totR.getCell(1).alignment=aln('left');
+  ws1.views=[{state:'frozen',xSplit:2,ySplit:3,activeCell:'C4'}];
+
+  // ── Sheet 2: Pontaj ───────────────────────────────────
   const data=mStats(y,m);
-  const pr2=[['Pontaj '+MO[m]+' '+y],[]];
-  pr2.push(['Angajat','Sectie','Total Ore','SP','SP+ (x1.5)','CO','CFP']);
+  const ws2=wb.addWorksheet('Pontaj '+MO[m]);
+  ws2.properties.defaultRowHeight=22;
+  ws2.columns=[{width:24},{width:12},{width:13},{width:8},{width:11},{width:8},{width:8}];
+
+  const t2R=ws2.addRow(['Pontaj '+MO[m]+' '+y]);
+  t2R.height=30;ws2.mergeCells(1,1,1,7);
+  const t2C=t2R.getCell(1);t2C.fill=fill(C.c2);t2C.font=fnt(C.ink,true,13);t2C.alignment=aln('left');
+  ws2.addRow([]);
+
+  const h2R=ws2.addRow(['Angajat','Sectie','Total Ore','SP','SP+ (x1.5)','CO','CFP']);
+  h2R.height=28;
+  h2R.eachCell((cell,col)=>{
+    cell.fill=fill(C.c2);cell.font=fnt(C.ink2,true,10);
+    cell.alignment=col<=2?aln('left'):aln('center');cell.border=bdrAll();
+  });
+
+  let s2H=0,s2SP=0,s2SPP=0,s2CO=0,s2CFP=0;
   SEC_ORDER.forEach(sec=>{
     const emps=g[sec];if(!emps||!emps.length)return;
-    pr2.push([SEC_LBL[sec]]);
-    emps.forEach(e=>{const d=data[e.id]||{};pr2.push([e.name,SEC_LBL[sec],d.h||0,d.sp||0,d.spp||0,d.co||0,d.cfp||0]);});
+    const sc=C.secs[sec];
+    const sR2=ws2.addRow([SEC_LBL[sec]]);sR2.height=17;
+    ws2.mergeCells(sR2.number,1,sR2.number,7);
+    sR2.getCell(1).fill=fill(sc.bg);sR2.getCell(1).font=fnt(sc.c,true,9);sR2.getCell(1).alignment=aln('left');
+    emps.forEach(e=>{
+      const d=data[e.id]||{};
+      s2H+=d.h||0;s2SP+=d.sp||0;s2SPP+=d.spp||0;s2CO+=d.co||0;s2CFP+=d.cfp||0;
+      const dR2=ws2.addRow([e.name,SEC_LBL[sec],d.h||0,d.sp||0,d.spp||0,d.co||0,d.cfp||0]);
+      dR2.height=22;
+      dR2.getCell(1).fill=fill(C.paper);dR2.getCell(1).font=fnt(C.ink,false,10);dR2.getCell(1).alignment=aln('left');dR2.getCell(1).border=bdrAll();
+      dR2.getCell(2).fill=fill(sc.bg);dR2.getCell(2).font=fnt(sc.c,false,9);dR2.getCell(2).alignment=aln('center');dR2.getCell(2).border=bdrAll();
+      dR2.getCell(3).fill=fill(C.c1);dR2.getCell(3).font=fnt(C.ink,true,12);dR2.getCell(3).alignment=aln('center');dR2.getCell(3).border=bdrAll();
+      [[4,C.spBg,C.sp],[5,C.sppBg,C.spp],[6,C.coBg,C.co],[7,C.cfpBg,C.cfp]].forEach(([col,bg,fg])=>{
+        dR2.getCell(col).fill=fill(bg);dR2.getCell(col).font=fnt(fg,false,10);dR2.getCell(col).alignment=aln('center');dR2.getCell(col).border=bdrAll();
+      });
+    });
   });
-  pr2.push(['TOTAL','',
-    S.emps.reduce((s,e)=>(s+(data[e.id]?.h||0)),0),
-    S.emps.reduce((s,e)=>(s+(data[e.id]?.sp||0)),0),
-    S.emps.reduce((s,e)=>(s+(data[e.id]?.spp||0)),0),
-    S.emps.reduce((s,e)=>(s+(data[e.id]?.co||0)),0),
-    S.emps.reduce((s,e)=>(s+(data[e.id]?.cfp||0)),0),
-  ]);
-  const ws2=XLSX.utils.aoa_to_sheet(pr2);
-  ws2['!cols']=[{wch:26},{wch:12},{wch:12},{wch:7},{wch:10},{wch:7},{wch:7}];
-  XLSX.utils.book_append_sheet(wb2,ws2,'Pontaj '+MO[m]);
-  XLSX.writeFile(wb2,`Pontaj_${MO[m]}_${y}.xlsx`);
-  toast('Fisier XLSX descarcat');
+  const tot2R=ws2.addRow(['TOTAL','',s2H,s2SP,s2SPP,s2CO,s2CFP]);
+  tot2R.height=26;
+  tot2R.eachCell((cell,col)=>{
+    cell.fill=fill(C.c3);cell.font=fnt(C.ink,true,11);
+    cell.alignment=col<=2?aln('left'):aln('center');
+    cell.border={top:{style:'medium',color:{argb:C.ink3}},bottom:bdr(),left:bdr(),right:bdr()};
+  });
+  ws2.views=[{state:'frozen',xSplit:2,ySplit:3,activeCell:'C4'}];
+
+  // Download
+  try{
+    const buf=await wb.xlsx.writeBuffer();
+    const blob=new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');a.href=url;a.download=`Pontaj_${MO[m]}_${y}.xlsx`;a.click();
+    URL.revokeObjectURL(url);
+    toast('Fisier XLSX descarcat');
+  }catch(err){toast('Eroare la generare');}
 }
 
 // ── PICKER ──────────────────────────────────────────────
 function buildWh(el,items,def){
-  el.innerHTML='<div style="height:57px"></div>'+
-    items.map(h=>`<div class="wh-item" data-v="${h}">${p2(h)}</div>`).join('')+
-    '<div style="height:57px"></div>';
+  el.innerHTML='<div style="height:57px"></div>'+items.map(h=>`<div class="wh-item" data-v="${h}">${p2(h)}</div>`).join('')+'<div style="height:57px"></div>';
   const idx=items.indexOf(def);if(idx>=0)el.scrollTop=idx*38;
-  const upd=()=>{
-    const i=Math.round(el.scrollTop/38);
-    el.querySelectorAll('.wh-item').forEach((it,j)=>it.classList.toggle('on',j===i));
-    updComp();
-  };
+  const upd=()=>{const i=Math.round(el.scrollTop/38);el.querySelectorAll('.wh-item').forEach((it,j)=>it.classList.toggle('on',j===i));updComp();};
   el.addEventListener('scroll',upd,{passive:true});upd();
 }
 function getWh(el){const i=Math.round(el.scrollTop/38);const it=el.querySelectorAll('.wh-item')[i];return it?parseInt(it.dataset.v):0;}
 function updComp(){document.getElementById('comp-h').textContent=ch(getWh(document.getElementById('wh-s')),getWh(document.getElementById('wh-e')));}
-
 function resetCodeBtns(){['SP','SPP','CO','CFP','OFF'].forEach(id=>document.getElementById('cbtn-'+id)?.classList.remove('sel'));}
 
 function openPk(key,eid,y,m,d,name){
@@ -661,8 +931,7 @@ function openPk(key,eid,y,m,d,name){
     if(c.type==='interval'){sh=c.s;eh=c.e;}
     else if(c.type==='code'){
       pkSelCode=c.code;
-      const btnId='cbtn-'+(c.code==='SP+'?'SPP':c.code);
-      document.getElementById(btnId)?.classList.add('sel');
+      document.getElementById('cbtn-'+(c.code==='SP+'?'SPP':c.code))?.classList.add('sel');
       document.getElementById('wh-sec').classList.add('dim');
       document.getElementById('computed').classList.add('dim');
       if(c.code==='CO'){
@@ -688,49 +957,35 @@ function selCode(code){
     document.getElementById('computed').classList.remove('dim');
     return;
   }
-  if(pkSelCode){document.getElementById('cbtn-'+(pkSelCode==='SP+'?'SPP':pkSelCode))?.classList.remove('sel');}
+  if(pkSelCode)document.getElementById('cbtn-'+(pkSelCode==='SP+'?'SPP':pkSelCode))?.classList.remove('sel');
   pkSelCode=code;pkCoAppr=null;
   document.getElementById('cbtn-'+(code==='SP+'?'SPP':code))?.classList.add('sel');
   document.getElementById('wh-sec').classList.add('dim');
   document.getElementById('computed').classList.add('dim');
-  if(code==='CO'){
-    document.getElementById('co-appr').classList.add('show');
-    document.getElementById('appr-yes').classList.remove('sel');
-    document.getElementById('appr-no').classList.remove('sel');
-  } else {
-    document.getElementById('co-appr').classList.remove('show');
-  }
+  if(code==='CO'){document.getElementById('co-appr').classList.add('show');document.getElementById('appr-yes').classList.remove('sel');document.getElementById('appr-no').classList.remove('sel');}
+  else document.getElementById('co-appr').classList.remove('show');
 }
 
-function selAppr(val){
-  pkCoAppr=val;
-  document.getElementById('appr-yes').classList.toggle('sel',val===true);
-  document.getElementById('appr-no').classList.toggle('sel',val===false);
-}
-
+function selAppr(val){pkCoAppr=val;document.getElementById('appr-yes').classList.toggle('sel',val===true);document.getElementById('appr-no').classList.toggle('sel',val===false);}
 function closePk(){document.getElementById('pkovl').classList.remove('open');}
 
 function applyPk(){
   if(!pkKey)return;
   if(pkSelCode){
     if(pkSelCode==='CO'&&pkCoAppr===null){toast('Selecteaza daca e aprobat sau nu');return;}
-    const cell={type:'code',code:pkSelCode};
-    if(pkSelCode==='CO')cell.approved=pkCoAppr;
+    const cell={type:'code',code:pkSelCode};if(pkSelCode==='CO')cell.approved=pkCoAppr;
     S.cells[pkKey]=cell;
   } else {
     S.cells[pkKey]={type:'interval',s:getWh(document.getElementById('wh-s')),e:getWh(document.getElementById('wh-e'))};
   }
   persist();closePk();
-  if(curTab==='lunar')renderLunar();
-  else if(curTab==='saptamanal')renderSaptamanal();
+  if(curTab==='lunar')renderLunar();else if(curTab==='saptamanal')renderSaptamanal();
 }
 
 function clearCell(){
   if(!pkKey)return;
-  delete S.cells[pkKey];
-  persist();closePk();
-  if(curTab==='lunar')renderLunar();
-  else if(curTab==='saptamanal')renderSaptamanal();
+  delete S.cells[pkKey];persist();closePk();
+  if(curTab==='lunar')renderLunar();else if(curTab==='saptamanal')renderSaptamanal();
 }
 
 // ── TABS / NAV ───────────────────────────────────────────
@@ -743,14 +998,14 @@ function goTab(t){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('on'));
   document.getElementById(`pg-${t}`).classList.add('on');
   const btn=document.getElementById('hbtn');
-  if(t==='angajati'){btn.style.display='';renderEmps();}
+  if(t==='angajati'){btn.style.display=isAdmin()?'':'none';renderEmps();}
   else btn.style.display='none';
   if(t==='lunar')renderLunar();
   else if(t==='saptamanal')renderSaptamanal();
 }
 
 // ── EMP MODAL ───────────────────────────────────────────
-function headerAct(){if(curTab==='angajati')openAdd();}
+function headerAct(){if(curTab==='angajati'&&isAdmin())openAdd();}
 function openAdd(){
   editId=null;
   document.getElementById('modal-title').textContent='Angajat nou';
@@ -773,19 +1028,18 @@ function saveEmp(){
   const sec=document.getElementById('f-sec').value;
   if(!name){toast('Introdu un nume');return;}
   if(editId){const e=S.emps.find(x=>x.id===editId);if(e){e.name=name;e.sec=sec;}toast('Actualizat');}
-  else{S.emps.push({id:uid(),name,sec});toast('Adaugat');}
+  else{S.emps.push({id:uid(),name,sec,pass:defaultPass(name)});toast('Adaugat');}
   persist();closeModal();renderEmps();
 }
 
 // ── TOAST ───────────────────────────────────────────────
-function toast(msg){
-  const t=document.getElementById('toast');
-  t.textContent=msg;t.classList.add('show');
-  setTimeout(()=>t.classList.remove('show'),2200);
-}
+function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2200);}
 
-// INIT
-renderLunar();
+// ── INIT ─────────────────────────────────────────────────
+populateLoginSelect();
+if(currentUser){
+  showApp();
+} // else: login screen visible, app hidden (default)
 </script>
 </body>
 </html>

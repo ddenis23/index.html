@@ -357,6 +357,30 @@ table.pt tr.trow td:first-child{text-align:left;padding-left:14px;font-family:va
 
 /* ── SCROLL HINT ── */
 .scroll-hint{text-align:center;font-size:9px;color:var(--ink4);padding:8px 0;letter-spacing:.5px;text-transform:uppercase;}
+
+/* ── PC / DESKTOP ── */
+@media (min-width:768px){
+  /* Modals centrate, nu bottom-sheet */
+  .pkovl,.ovl{align-items:center;justify-content:center;padding:24px;}
+  .pksheet{
+    border-radius:18px;max-width:480px;width:100%;
+    transform:translateY(12px) scale(0.97);
+    border:1px solid var(--rule);padding-bottom:20px;max-height:90vh;
+  }
+  .pkovl.open .pksheet{transform:none;}
+  .msheet{
+    border-radius:18px;max-width:440px;width:100%;
+    transform:translateY(12px) scale(0.97);
+    border:1px solid var(--rule);padding-bottom:20px;
+  }
+  .ovl.open .msheet{transform:none;}
+  /* Ascunde handlere de drag (touch) */
+  .pk-handle,.mhandle{display:none;}
+  /* Hover pe celulele de tabel */
+  table.mt td.dtd:hover .cell{filter:brightness(0.93);}
+  /* Ascunde hint-ul de scroll mobil */
+  .scroll-hint{display:none;}
+}
 </style>
 </head>
 <body>
@@ -845,6 +869,14 @@ function toast(msg){
   t.textContent=msg;t.classList.add('show');
   setTimeout(()=>t.classList.remove('show'),2200);
 }
+
+// ── KEYBOARD (PC) ────────────────────────────────────────
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'){
+    if(document.getElementById('pkovl').classList.contains('open'))closePk();
+    else if(document.getElementById('emp-modal').classList.contains('open'))closeModal();
+  }
+});
 
 // INIT
 renderEmps();

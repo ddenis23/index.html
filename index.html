@@ -822,7 +822,7 @@ function renderEmps(){
       const parts=[];
       if(s.h)parts.push(`<span class="emsv"><b>${s.h}</b>ore</span>`);
       if(s.sp)parts.push(`<span class="emsv" style="color:var(--sp)"><b>${s.sp}</b>SP</span>`);
-      if(s.spp)parts.push(`<span class="emsv" style="color:var(--spp)"><b>${s.spp}</b>SP+</span>`);
+      if(s.spp)parts.push(`<span class="emsv" style="color:var(--spp)"><b>${s.spp*1.5}</b>SP+</span>`);
       if(s.co)parts.push(`<span class="emsv" style="color:var(--co)"><b>${s.co}</b>CO</span>`);
       if(s.cfp)parts.push(`<span class="emsv" style="color:var(--cfp)"><b>${s.cfp}</b>CFP</span>`);
       const statsHtml=parts.length?`<div class="emp-mini-stats">${parts.join('')}</div>`:'';
@@ -902,10 +902,10 @@ function renderLunar(){
           <div class="cell ${dis.cls}"><div class="cell-h">${dis.h||'·'}</div>${dis.iv?`<div class="cell-iv">${dis.iv}</div>`:''}</div></td>`;
       }
       tH+=h;tSP+=sp;tSPP+=spp;tCO+=co;tCFP+=cfp;
-      tb+=`<td class="std">${h||'—'}</td><td class="std sp">${sp||'—'}</td><td class="std spp">${spp||'—'}</td><td class="std co">${co||'—'}</td><td class="std cfp">${cfp||'—'}</td></tr>`;
+      tb+=`<td class="std">${h||'—'}</td><td class="std sp">${sp||'—'}</td><td class="std spp">${spp?spp*1.5:'—'}</td><td class="std co">${co||'—'}</td><td class="std cfp">${cfp||'—'}</td></tr>`;
     });
   });
-  tb+=`<tr class="trow"><td>Total</td>${Array(days).fill('<td></td>').join('')}<td>${tH}</td><td style="color:var(--sp)">${tSP||'—'}</td><td style="color:var(--spp)">${tSPP||'—'}</td><td style="color:var(--co)">${tCO||'—'}</td><td style="color:var(--cfp)">${tCFP||'—'}</td></tr></tbody>`;
+  tb+=`<tr class="trow"><td>Total</td>${Array(days).fill('<td></td>').join('')}<td>${tH}</td><td style="color:var(--sp)">${tSP||'—'}</td><td style="color:var(--spp)">${tSPP?tSPP*1.5:'—'}</td><td style="color:var(--co)">${tCO||'—'}</td><td style="color:var(--cfp)">${tCFP||'—'}</td></tr></tbody>`;
   document.getElementById('tbl-l').innerHTML=th+tb;
 }
 
@@ -1040,7 +1040,7 @@ async function doXLSX(){
         if(c.type==='interval')h+=ch(c.s,c.e);
         else{if(c.code==='SP')sp++;if(c.code==='SP+')spp++;if(c.code==='CO')co++;if(c.code==='CFP')cfp++;}
       }
-      rowData.push(h||'',sp||'',spp||'',co||'',cfp||'');
+      rowData.push(h||'',sp||'',spp?spp*1.5:'',co||'',cfp||'');
       const dR=ws1.addRow(rowData);dR.height=22;
       // Name
       dR.getCell(1).fill=fill(C.paper);dR.getCell(1).font=fnt(C.ink,false,10);dR.getCell(1).alignment=aln('left');dR.getCell(1).border=bdrAll();
@@ -1067,7 +1067,7 @@ async function doXLSX(){
   // Total row
   let tH=0,tSP=0,tSPP=0,tCO=0,tCFP=0;
   S.emps.forEach(e=>{for(let d=1;d<=days;d++){const c=S.cells[ck(e.id,y,m,d)];if(!c)continue;if(c.type==='interval')tH+=ch(c.s,c.e);if(c.type==='code'){if(c.code==='SP')tSP++;if(c.code==='SP+')tSPP++;if(c.code==='CO')tCO++;if(c.code==='CFP')tCFP++;}}});
-  const totR=ws1.addRow(['TOTAL','',...Array(days).fill(''),tH||'—',tSP||'—',tSPP||'—',tCO||'—',tCFP||'—']);
+  const totR=ws1.addRow(['TOTAL','',...Array(days).fill(''),tH||'—',tSP||'—',tSPP?tSPP*1.5:'—',tCO||'—',tCFP||'—']);
   totR.height=26;
   totR.eachCell((cell,col)=>{
     cell.fill=fill(C.c3);cell.font=fnt(C.ink,true,10);
@@ -1104,8 +1104,8 @@ async function doXLSX(){
     sR2.getCell(1).fill=fill(sc.bg);sR2.getCell(1).font=fnt(sc.c,true,9);sR2.getCell(1).alignment=aln('left');
     emps.forEach(e=>{
       const d=data[e.id]||{};
-      s2H+=d.h||0;s2SP+=d.sp||0;s2SPP+=d.spp||0;s2CO+=d.co||0;s2CFP+=d.cfp||0;
-      const dR2=ws2.addRow([e.name,SEC_LBL[sec],d.h||0,d.sp||0,d.spp||0,d.co||0,d.cfp||0]);
+      s2H+=d.h||0;s2SP+=d.sp||0;s2SPP+=(d.spp||0)*1.5;s2CO+=d.co||0;s2CFP+=d.cfp||0;
+      const dR2=ws2.addRow([e.name,SEC_LBL[sec],d.h||0,d.sp||0,(d.spp||0)*1.5,d.co||0,d.cfp||0]);
       dR2.height=22;
       dR2.getCell(1).fill=fill(C.paper);dR2.getCell(1).font=fnt(C.ink,false,10);dR2.getCell(1).alignment=aln('left');dR2.getCell(1).border=bdrAll();
       dR2.getCell(2).fill=fill(sc.bg);dR2.getCell(2).font=fnt(sc.c,false,9);dR2.getCell(2).alignment=aln('center');dR2.getCell(2).border=bdrAll();

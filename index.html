@@ -736,7 +736,7 @@ async function loginEmp(){
   btn.disabled=false;btn.textContent='Intra';
   if(!emp||emp.password!==pass){errEl.textContent='Parola incorecta.';return;}
   currentUser={role:'employee',id,name:emp.name};
-  sessionStorage.setItem('ptUser',JSON.stringify(currentUser));
+  localStorage.setItem('ptUser',JSON.stringify(currentUser));
   showApp();
 }
 
@@ -750,12 +750,12 @@ async function loginAdmin(){
   btn.disabled=false;btn.textContent='Intra';
   if(!snap.val()||snap.val()!==pass){errEl.textContent='Parola incorecta.';return;}
   currentUser={role:'admin'};
-  sessionStorage.setItem('ptUser',JSON.stringify(currentUser));
+  localStorage.setItem('ptUser',JSON.stringify(currentUser));
   showApp();
 }
 
 function logout(){
-  currentUser=null;sessionStorage.removeItem('ptUser');
+  currentUser=null;localStorage.removeItem('ptUser');
   document.getElementById('app').style.display='none';
   document.getElementById('login-screen').style.display='';
   document.getElementById('l-emp-pass').value='';
@@ -1351,10 +1351,10 @@ async function init(){
 
   // Restore session
   try{
-    const u=sessionStorage.getItem('ptUser');
+    const u=localStorage.getItem('ptUser');
     if(u){
       const p=JSON.parse(u);
-      if(p.role==='employee'&&!S.emps.find(e=>e.id===p.id)){sessionStorage.removeItem('ptUser');}
+      if(p.role==='employee'&&!S.emps.find(e=>e.id===p.id)){localStorage.removeItem('ptUser');}
       else{currentUser=p;}
     }
   }catch(e){}

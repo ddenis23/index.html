@@ -821,8 +821,8 @@ function renderEmps(){
       const s=stats[e.id]||{h:0,sp:0,spp:0,co:0,cfp:0};
       const parts=[];
       if(s.h)parts.push(`<span class="emsv"><b>${s.h}</b>ore</span>`);
-      if(s.sp)parts.push(`<span class="emsv" style="color:var(--sp)"><b>${s.sp}</b>SP</span>`);
-      if(s.spp)parts.push(`<span class="emsv" style="color:var(--spp)"><b>${s.spp*1.5}</b>SP+</span>`);
+      const empSP=s.sp+s.spp*1.5;
+      if(empSP)parts.push(`<span class="emsv" style="color:var(--sp)"><b>${empSP}</b>SP</span>`);
       if(s.co)parts.push(`<span class="emsv" style="color:var(--co)"><b>${s.co}</b>CO</span>`);
       if(s.cfp)parts.push(`<span class="emsv" style="color:var(--cfp)"><b>${s.cfp}</b>CFP</span>`);
       const statsHtml=parts.length?`<div class="emp-mini-stats">${parts.join('')}</div>`:'';
@@ -883,12 +883,12 @@ function renderLunar(){
     const isToday=y===today.getFullYear()&&m===today.getMonth()&&d===today.getDate();
     th+=`<th class="dth${w>=5?' weth':''}${isToday?' tdth':''}"><span class="dth-n">${d}</span><span class="dth-d">${DS[w]}</span></th>`;
   }
-  th+=`<th class="sth">Ore</th><th class="sth" style="color:var(--sp)">SP</th><th class="sth" style="color:var(--spp)">SP+</th><th class="sth" style="color:var(--co)">CO</th><th class="sth" style="color:var(--cfp)">CFP</th></tr></thead>`;
+  th+=`<th class="sth">Ore</th><th class="sth" style="color:var(--sp)">SP</th><th class="sth" style="color:var(--co)">CO</th><th class="sth" style="color:var(--cfp)">CFP</th></tr></thead>`;
   let tb='<tbody>';let tH=0,tSP=0,tSPP=0,tCO=0,tCFP=0;
   SEC_ORDER.forEach(sec=>{
     const emps=g[sec];if(!emps||!emps.length)return;
     const st=SEC_ST[sec];
-    tb+=`<tr class="srow"><td colspan="${days+6}" style="color:${st.c}">${SEC_LBL[sec]}</td></tr>`;
+    tb+=`<tr class="srow"><td colspan="${days+5}" style="color:${st.c}">${SEC_LBL[sec]}</td></tr>`;
     emps.forEach(e=>{
       let h=0,sp=0,spp=0,co=0,cfp=0;
       const isMe=isEmp()&&currentUser.id===e.id;
@@ -901,11 +901,13 @@ function renderLunar(){
         tb+=`<td class="dtd${w>=5?' we':''}${isToday2?' today':''}${isAdmin()?' clickable':''}" ${click}>
           <div class="cell ${dis.cls}"><div class="cell-h">${dis.h||'·'}</div>${dis.iv?`<div class="cell-iv">${dis.iv}</div>`:''}</div></td>`;
       }
+      const spTotal=sp+spp*1.5;
       tH+=h;tSP+=sp;tSPP+=spp;tCO+=co;tCFP+=cfp;
-      tb+=`<td class="std">${h||'—'}</td><td class="std sp">${sp||'—'}</td><td class="std spp">${spp?spp*1.5:'—'}</td><td class="std co">${co||'—'}</td><td class="std cfp">${cfp||'—'}</td></tr>`;
+      tb+=`<td class="std">${h||'—'}</td><td class="std sp">${spTotal||'—'}</td><td class="std co">${co||'—'}</td><td class="std cfp">${cfp||'—'}</td></tr>`;
     });
   });
-  tb+=`<tr class="trow"><td>Total</td>${Array(days).fill('<td></td>').join('')}<td>${tH}</td><td style="color:var(--sp)">${tSP||'—'}</td><td style="color:var(--spp)">${tSPP?tSPP*1.5:'—'}</td><td style="color:var(--co)">${tCO||'—'}</td><td style="color:var(--cfp)">${tCFP||'—'}</td></tr></tbody>`;
+  const tSpTotal=tSP+tSPP*1.5;
+  tb+=`<tr class="trow"><td>Total</td>${Array(days).fill('<td></td>').join('')}<td>${tH}</td><td style="color:var(--sp)">${tSpTotal||'—'}</td><td style="color:var(--co)">${tCO||'—'}</td><td style="color:var(--cfp)">${tCFP||'—'}</td></tr></tbody>`;
   document.getElementById('tbl-l').innerHTML=th+tb;
 }
 
@@ -1000,8 +1002,8 @@ async function doXLSX(){
   // ── Sheet 1: Program ──────────────────────────────────
   const ws1=wb.addWorksheet('Program '+MO[m]);
   ws1.properties.defaultRowHeight=22;
-  const colCount=days+7;
-  ws1.columns=[{width:22},{width:11},...Array(days).fill({width:7}),{width:9},{width:6},{width:6},{width:6},{width:6}];
+  const colCount=days+6;
+  ws1.columns=[{width:22},{width:11},...Array(days).fill({width:7}),{width:9},{width:7},{width:6},{width:6}];
 
   // Title
   const tR=ws1.addRow(['Program '+MO[m]+' '+y]);
@@ -1012,7 +1014,7 @@ async function doXLSX(){
   // Header
   const hArr=['Angajat','Sectie'];
   for(let d=1;d<=days;d++){const w=dow(y,m,d);hArr.push(`${DS[w]}${d}`);}
-  hArr.push('Ore','SP','SP+','CO','CFP');
+  hArr.push('Ore','SP','CO','CFP');
   const hR=ws1.addRow(hArr);hR.height=28;
   hR.eachCell((cell,col)=>{
     cell.fill=fill(C.c2);cell.font=fnt(C.ink2,true,9);
@@ -1040,7 +1042,8 @@ async function doXLSX(){
         if(c.type==='interval')h+=ch(c.s,c.e);
         else{if(c.code==='SP')sp++;if(c.code==='SP+')spp++;if(c.code==='CO')co++;if(c.code==='CFP')cfp++;}
       }
-      rowData.push(h||'',sp||'',spp?spp*1.5:'',co||'',cfp||'');
+      const spTot=sp+spp*1.5;
+      rowData.push(h||'',spTot||'',co||'',cfp||'');
       const dR=ws1.addRow(rowData);dR.height=22;
       // Name
       dR.getCell(1).fill=fill(C.paper);dR.getCell(1).font=fnt(C.ink,false,10);dR.getCell(1).alignment=aln('left');dR.getCell(1).border=bdrAll();
@@ -1054,8 +1057,8 @@ async function doXLSX(){
         cell.font=fnt(cs.fg,cs.bold,9);cell.alignment=aln('center');cell.border=bdrAll();
       }
       // Summary cells
-      const sumColors=[null,{bg:C.spBg,fg:C.sp},{bg:C.sppBg,fg:C.spp},{bg:C.coBg,fg:C.co},{bg:C.cfpBg,fg:C.cfp}];
-      for(let i=0;i<5;i++){
+      const sumColors=[null,{bg:C.spBg,fg:C.sp},{bg:C.coBg,fg:C.co},{bg:C.cfpBg,fg:C.cfp}];
+      for(let i=0;i<4;i++){
         const cell=dR.getCell(days+3+i);
         if(i===0){cell.fill=fill(C.c2);cell.font=fnt(C.ink,true,10);}
         else{const sc2=sumColors[i];cell.fill=fill(C.c2);cell.font=fnt(sc2.fg,false,10);}
@@ -1067,7 +1070,8 @@ async function doXLSX(){
   // Total row
   let tH=0,tSP=0,tSPP=0,tCO=0,tCFP=0;
   S.emps.forEach(e=>{for(let d=1;d<=days;d++){const c=S.cells[ck(e.id,y,m,d)];if(!c)continue;if(c.type==='interval')tH+=ch(c.s,c.e);if(c.type==='code'){if(c.code==='SP')tSP++;if(c.code==='SP+')tSPP++;if(c.code==='CO')tCO++;if(c.code==='CFP')tCFP++;}}});
-  const totR=ws1.addRow(['TOTAL','',...Array(days).fill(''),tH||'—',tSP||'—',tSPP?tSPP*1.5:'—',tCO||'—',tCFP||'—']);
+  const tSpTot=tSP+tSPP*1.5;
+  const totR=ws1.addRow(['TOTAL','',...Array(days).fill(''),tH||'—',tSpTot||'—',tCO||'—',tCFP||'—']);
   totR.height=26;
   totR.eachCell((cell,col)=>{
     cell.fill=fill(C.c3);cell.font=fnt(C.ink,true,10);
@@ -1081,41 +1085,42 @@ async function doXLSX(){
   const data=mStats(y,m);
   const ws2=wb.addWorksheet('Pontaj '+MO[m]);
   ws2.properties.defaultRowHeight=22;
-  ws2.columns=[{width:24},{width:12},{width:13},{width:8},{width:11},{width:8},{width:8}];
+  ws2.columns=[{width:24},{width:12},{width:13},{width:9},{width:8},{width:8}];
 
   const t2R=ws2.addRow(['Pontaj '+MO[m]+' '+y]);
-  t2R.height=30;ws2.mergeCells(1,1,1,7);
+  t2R.height=30;ws2.mergeCells(1,1,1,6);
   const t2C=t2R.getCell(1);t2C.fill=fill(C.c2);t2C.font=fnt(C.ink,true,13);t2C.alignment=aln('left');
   ws2.addRow([]);
 
-  const h2R=ws2.addRow(['Angajat','Sectie','Total Ore','SP','SP+ (x1.5)','CO','CFP']);
+  const h2R=ws2.addRow(['Angajat','Sectie','Total Ore','SP','CO','CFP']);
   h2R.height=28;
   h2R.eachCell((cell,col)=>{
     cell.fill=fill(C.c2);cell.font=fnt(C.ink2,true,10);
     cell.alignment=col<=2?aln('left'):aln('center');cell.border=bdrAll();
   });
 
-  let s2H=0,s2SP=0,s2SPP=0,s2CO=0,s2CFP=0;
+  let s2H=0,s2SP=0,s2CO=0,s2CFP=0;
   SEC_ORDER.forEach(sec=>{
     const emps=g[sec];if(!emps||!emps.length)return;
     const sc=C.secs[sec];
     const sR2=ws2.addRow([SEC_LBL[sec]]);sR2.height=17;
-    ws2.mergeCells(sR2.number,1,sR2.number,7);
+    ws2.mergeCells(sR2.number,1,sR2.number,6);
     sR2.getCell(1).fill=fill(sc.bg);sR2.getCell(1).font=fnt(sc.c,true,9);sR2.getCell(1).alignment=aln('left');
     emps.forEach(e=>{
       const d=data[e.id]||{};
-      s2H+=d.h||0;s2SP+=d.sp||0;s2SPP+=(d.spp||0)*1.5;s2CO+=d.co||0;s2CFP+=d.cfp||0;
-      const dR2=ws2.addRow([e.name,SEC_LBL[sec],d.h||0,d.sp||0,(d.spp||0)*1.5,d.co||0,d.cfp||0]);
+      const empSpTot=(d.sp||0)+(d.spp||0)*1.5;
+      s2H+=d.h||0;s2SP+=empSpTot;s2CO+=d.co||0;s2CFP+=d.cfp||0;
+      const dR2=ws2.addRow([e.name,SEC_LBL[sec],d.h||0,empSpTot||0,d.co||0,d.cfp||0]);
       dR2.height=22;
       dR2.getCell(1).fill=fill(C.paper);dR2.getCell(1).font=fnt(C.ink,false,10);dR2.getCell(1).alignment=aln('left');dR2.getCell(1).border=bdrAll();
       dR2.getCell(2).fill=fill(sc.bg);dR2.getCell(2).font=fnt(sc.c,false,9);dR2.getCell(2).alignment=aln('center');dR2.getCell(2).border=bdrAll();
       dR2.getCell(3).fill=fill(C.c1);dR2.getCell(3).font=fnt(C.ink,true,12);dR2.getCell(3).alignment=aln('center');dR2.getCell(3).border=bdrAll();
-      [[4,C.spBg,C.sp],[5,C.sppBg,C.spp],[6,C.coBg,C.co],[7,C.cfpBg,C.cfp]].forEach(([col,bg,fg])=>{
+      [[4,C.spBg,C.sp],[5,C.coBg,C.co],[6,C.cfpBg,C.cfp]].forEach(([col,bg,fg])=>{
         dR2.getCell(col).fill=fill(bg);dR2.getCell(col).font=fnt(fg,false,10);dR2.getCell(col).alignment=aln('center');dR2.getCell(col).border=bdrAll();
       });
     });
   });
-  const tot2R=ws2.addRow(['TOTAL','',s2H,s2SP,s2SPP,s2CO,s2CFP]);
+  const tot2R=ws2.addRow(['TOTAL','',s2H,s2SP,s2CO,s2CFP]);
   tot2R.height=26;
   tot2R.eachCell((cell,col)=>{
     cell.fill=fill(C.c3);cell.font=fnt(C.ink,true,11);

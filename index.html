@@ -178,10 +178,14 @@ table.mt tr.trow td:first-child{text-align:left;padding-left:10px;font-family:va
 /* ── SECTION MANAGEMENT ── */
 .sec-mgmt{margin-bottom:18px;}
 .sec-chips{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 12px;}
-.sec-chip{display:flex;align-items:center;gap:7px;padding:7px 10px 7px 12px;border-radius:20px;border:1.5px solid transparent;font-size:12px;font-weight:600;}
-.sec-chip-act{display:flex;gap:4px;margin-left:2px;}
-.sec-chip-btn{width:22px;height:22px;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.08);color:inherit;flex-shrink:0;}
-.sec-chip-btn:hover{background:rgba(0,0,0,.16);}
+.sec-chip{display:flex;align-items:center;gap:8px;padding:6px 10px 6px 10px;border-radius:8px;border:1px solid var(--rule);background:var(--c1);font-size:12px;font-weight:500;color:var(--ink2);}
+.sec-chip-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.sec-chip-lbl{color:var(--ink);font-weight:600;font-size:12px;}
+.sec-chip-count{color:var(--ink4);font-weight:400;font-size:11px;}
+.sec-chip-act{display:flex;gap:3px;margin-left:4px;}
+.sec-chip-btn{width:20px;height:20px;border-radius:5px;border:1px solid transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;background:transparent;color:var(--ink4);flex-shrink:0;transition:background .1s,border-color .1s,color .1s;}
+.sec-chip-btn:hover{background:var(--c3);border-color:var(--rule);color:var(--ink);}
+.sec-chip-btn.del:hover{background:#fdf0f0;border-color:#d4a8a8;color:var(--cfp);}
 .btn-add-sec{height:34px;padding:0 14px;background:var(--c2);border:1px solid var(--rule);border-radius:8px;font-family:var(--font);font-size:12px;font-weight:500;color:var(--ink2);cursor:pointer;}
 .btn-add-sec:hover{background:var(--c3);}
 /* Color picker */
@@ -254,7 +258,7 @@ table.mt tr.trow td:first-child{text-align:left;padding-left:10px;font-family:va
 .field input:focus,.field select:focus{border-color:var(--acc);}
 .mbtns{display:flex;gap:10px;margin-top:18px;}
 .btn-save{flex:1;height:50px;background:var(--ink);color:var(--paper);border:none;border-radius:8px;font-family:var(--font);font-size:15px;font-weight:500;cursor:pointer;-webkit-appearance:none;}
-.btn-cancel{height:50px;padding:0 20px;background:var(--c2);color:var(--ink2);border:none;border-radius:8px;font-family:var(--font);font-size:15px;cursor:pointer;-webkit-appearance:none;}
+.btn-cancel{flex:1;height:50px;padding:0;background:var(--c2);color:var(--ink2);border:none;border-radius:8px;font-family:var(--font);font-size:15px;cursor:pointer;-webkit-appearance:none;appearance:none;}
 
 /* ── TOAST ── */
 .toast{position:fixed;bottom:calc(var(--sb)+20px);left:50%;transform:translateX(-50%) translateY(8px);background:var(--ink);color:var(--paper);border-radius:6px;padding:10px 18px;font-size:12px;font-weight:500;opacity:0;transition:all .22s;z-index:300;white-space:nowrap;pointer-events:none;letter-spacing:.2px;}
@@ -785,13 +789,15 @@ function renderEmps(){
       <div class="sec-chips">`;
     S.secs.forEach(s=>{
       const empCount=S.emps.filter(e=>e.sec===s.id).length;
-      html+=`<div class="sec-chip" style="background:${s.bg};color:${s.c};border-color:${s.c}30">
-        ${s.label} <span style="opacity:.5;font-weight:400;font-size:10px">(${empCount})</span>
+      html+=`<div class="sec-chip">
+        <span class="sec-chip-dot" style="background:${s.c}"></span>
+        <span class="sec-chip-lbl">${s.label}</span>
+        <span class="sec-chip-count">${empCount}</span>
         <div class="sec-chip-act">
           <button class="sec-chip-btn" onclick="openEditSec('${s.id}')" title="Editeaza">
             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
           </button>
-          ${empCount===0?`<button class="sec-chip-btn" onclick="delSec('${s.id}')" title="Sterge" style="background:rgba(122,24,24,.15);color:#7a1818">
+          ${empCount===0?`<button class="sec-chip-btn del" onclick="delSec('${s.id}')" title="Sterge">
             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg>
           </button>`:''}
         </div>

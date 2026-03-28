@@ -466,10 +466,12 @@ table.mt tr.trow td:first-child{text-align:left;padding-left:10px;font-family:va
 // ── FIREBASE ─────────────────────────────────────────────
 const _cfg = window.APP_CONFIG || {};
 let db = null;
-if(_cfg.apiKey && _cfg.apiKey !== 'YOUR_API_KEY'){
-  firebase.initializeApp(_cfg);
-  db = firebase.database();
-}
+try{
+  if(_cfg.apiKey && _cfg.apiKey !== 'YOUR_API_KEY'){
+    const _app = firebase.apps.length ? firebase.app() : firebase.initializeApp(_cfg);
+    db = firebase.database(_app);
+  }
+}catch(e){console.error('Firebase init error:',e);}
 
 // ── CONFIG ──────────────────────────────────────────────
 const SEC_ORDER = ['CALD','RECE','COFETARIE','GRATAR','VASE','ALTELE'];

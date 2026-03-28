@@ -191,8 +191,8 @@ table.mt tr.trow td:first-child{text-align:left;padding-left:10px;font-family:va
 /* Color picker */
 .color-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-top:6px;}
 .cswatch{height:36px;border-radius:8px;border:2.5px solid transparent;cursor:pointer;transition:border-color .12s,transform .1s;}
-.cswatch:hover{transform:scale(1.08);}
-.cswatch.sel{border-color:var(--ink);}
+.cswatch:hover{transform:scale(1.06);}
+.cswatch.sel{border-color:#fff;box-shadow:0 0 0 1.5px var(--ink);}
 
 /* ── CONFIRM DELETE ── */
 .del-confirm{position:absolute;inset:0;background:var(--paper);display:none;align-items:center;justify-content:space-between;padding:0 14px;border-radius:var(--r);border:1.5px solid var(--cfp-bg);gap:10px;}
@@ -248,7 +248,7 @@ table.mt tr.trow td:first-child{text-align:left;padding-left:10px;font-family:va
 /* ── MODAL ── */
 .ovl{position:fixed;inset:0;z-index:100;background:rgba(20,16,8,.5);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);display:flex;align-items:flex-end;opacity:0;pointer-events:none;transition:opacity .2s;}
 .ovl.open{opacity:1;pointer-events:all;}
-.msheet{background:var(--paper);border-radius:18px 18px 0 0;padding:20px 18px calc(var(--sb)+20px);width:100%;transform:translateY(100%);transition:transform .3s cubic-bezier(.32,1,.6,1);border:1px solid var(--rule);border-bottom:none;}
+.msheet{background:var(--paper);border-radius:18px 18px 0 0;padding:20px 18px calc(var(--sb)+20px);width:100%;max-height:92vh;overflow-y:auto;transform:translateY(100%);transition:transform .3s cubic-bezier(.32,1,.6,1);border:1px solid var(--rule);border-bottom:none;}
 .ovl.open .msheet{transform:translateY(0);}
 .mhandle{width:32px;height:3px;border-radius:2px;background:var(--rule);margin:0 auto 18px;}
 .mtitle{font-size:18px;font-weight:600;color:var(--ink);margin-bottom:18px;}
@@ -280,7 +280,7 @@ table.mt tr.trow td:first-child{text-align:left;padding-left:10px;font-family:va
   .pkovl,.ovl{align-items:center;justify-content:center;padding:24px;}
   .pksheet{border-radius:18px;max-width:480px;width:100%;transform:translateY(12px) scale(0.97);border:1px solid var(--rule);padding-bottom:20px;max-height:90vh;}
   .pkovl.open .pksheet{transform:none;}
-  .msheet{border-radius:18px;max-width:440px;width:100%;transform:translateY(12px) scale(0.97);border:1px solid var(--rule);padding-bottom:20px;}
+  .msheet{border-radius:18px;max-width:440px;width:100%;max-height:90vh;overflow-y:auto;transform:translateY(12px) scale(0.97);border:1px solid var(--rule);padding-bottom:20px;}
   .ovl.open .msheet{transform:none;}
   .pk-handle,.mhandle{display:none;}
   /* Table — wider cells on desktop */
@@ -551,10 +551,10 @@ const DEFAULT_SECS = [
   {id:'ALTELE',    label:'Altele',    bg:'#f0ece3',c:'#5a5040'},
 ];
 const COLOR_PRESETS = [
-  {bg:'#fef3e2',c:'#7a4800'},{bg:'#e8f4fd',c:'#14446e'},{bg:'#f3e5f5',c:'#6a1b9a'},
-  {bg:'#e8f5e9',c:'#1b5e20'},{bg:'#fff3e0',c:'#c65000'},{bg:'#f0ece3',c:'#5a5040'},
-  {bg:'#fce4ec',c:'#880e4f'},{bg:'#e0f7fa',c:'#006064'},{bg:'#fff9c4',c:'#f57f17'},
-  {bg:'#f1f8e9',c:'#33691e'},
+  {bg:'#faeae6',c:'#b83220'},{bg:'#e6eef7',c:'#1a4080'},{bg:'#f0e6f7',c:'#6020a0'},
+  {bg:'#e6f0e8',c:'#1a5022'},{bg:'#f7ede0',c:'#bf5000'},{bg:'#f0ece4',c:'#5a3e20'},
+  {bg:'#f7e4ec',c:'#8a1040'},{bg:'#e0f0f2',c:'#006070'},{bg:'#f7f0d8',c:'#8a6400'},
+  {bg:'#ebebeb',c:'#3a3a3a'},
 ];
 let SEC_ORDER = DEFAULT_SECS.map(s=>s.id);
 let SEC_LBL   = Object.fromEntries(DEFAULT_SECS.map(s=>[s.id,s.label]));
@@ -1263,7 +1263,7 @@ function closeSecModal(){document.getElementById('sec-modal').classList.remove('
 function buildColorGrid(){
   const grid=document.getElementById('color-grid');
   grid.innerHTML=COLOR_PRESETS.map((p,i)=>
-    `<div class="cswatch${selColor&&selColor.bg===p.bg?' sel':''}" style="background:${p.bg};border-color:${selColor&&selColor.bg===p.bg?'var(--ink)':'transparent'}" onclick="pickColor(${i})"></div>`
+    `<div class="cswatch${selColor&&selColor.bg===p.bg?' sel':''}" style="background:${p.c}" onclick="pickColor(${i})"></div>`
   ).join('');
 }
 function pickColor(i){selColor=COLOR_PRESETS[i];buildColorGrid();}

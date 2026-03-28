@@ -8,6 +8,8 @@
 <meta name="apple-mobile-web-app-title" content="Pontaj">
 <title>Pontaj</title>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
 <style>
 :root {
@@ -260,6 +262,12 @@ table.mt tr.trow td:first-child{text-align:left;padding-left:10px;font-family:va
   .emp-sec-wrap{grid-template-columns:1fr 1fr 1fr;}
   .content{padding:24px 32px 32px;}
 }
+/* ── LOADING ── */
+@keyframes spin{to{transform:rotate(360deg)}}
+.spin{width:30px;height:30px;border:3px solid var(--rule);border-top-color:var(--ink);border-radius:50%;animation:spin .75s linear infinite;margin:0 auto;}
+#loading-ovl{position:fixed;inset:0;z-index:950;background:var(--c1);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:14px;}
+#loading-ovl span{font-size:12px;color:var(--ink3);letter-spacing:.4px;}
+
 @media (min-width:1440px){
   #app{max-width:1440px;margin:0 auto;box-shadow:0 0 60px rgba(30,26,18,.1);}
   .tabs{width:220px;}
@@ -310,6 +318,12 @@ table.mt tr.trow td:first-child{text-align:left;padding-left:10px;font-family:va
 
     <div class="login-err" id="login-err"></div>
   </div>
+</div>
+
+<!-- ── LOADING ── -->
+<div id="loading-ovl" style="display:none">
+  <div class="spin"></div>
+  <span>Se incarca...</span>
 </div>
 
 <!-- ── APP ── -->
@@ -438,6 +452,12 @@ table.mt tr.trow td:first-child{text-align:left;padding-left:10px;font-family:va
 </div><!-- /app -->
 
 <script>
+// ── SUPABASE ─────────────────────────────────────────────
+const _cfg = window.APP_CONFIG || {};
+const db = (_cfg.supabaseUrl && _cfg.supabaseUrl !== 'https://YOUR_PROJECT_ID.supabase.co')
+  ? window.supabase.createClient(_cfg.supabaseUrl, _cfg.supabaseKey)
+  : null;
+
 // ── CONFIG ──────────────────────────────────────────────
 const SEC_ORDER = ['CALD','RECE','COFETARIE','GRATAR','VASE','ALTELE'];
 const SEC_LBL   = {CALD:'Cald',RECE:'Rece',COFETARIE:'Cofetarie',GRATAR:'Gratar',VASE:'Vase',ALTELE:'Altele'};
@@ -454,44 +474,13 @@ const DS = ['L','M','Mi','J','V','S','D'];
 const DF = ['Luni','Marti','Miercuri','Joi','Vineri','Sambata','Duminica'];
 const SH = [6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22];
 const EH = [8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,0,1,2];
-const ADMIN_PASS = 'Pontaj@2026';
-
 // ── STATE ────────────────────────────────────────────────
-let S = (() => {
-  try{const s=localStorage.getItem('pt6');if(s)return JSON.parse(s);}catch(e){}
-  return {
-    emps:[
-      {id:'1', name:'IONUT BALASA',             sec:'CALD',      pass:'ionut'},
-      {id:'2', name:'ALEXANDRU PARASCHIV',       sec:'CALD',      pass:'alex'},
-      {id:'3', name:'BOGDAN MORARU ALEXA',       sec:'CALD',      pass:'bogdan'},
-      {id:'4', name:'MATEI STELIAN ALEXANDRU',   sec:'CALD',      pass:'matei'},
-      {id:'5', name:'DIONIS DEMIAN DENIS',       sec:'RECE',      pass:'dionis'},
-      {id:'6', name:'JAMANDI MARIUS GHEORGHE',   sec:'RECE',      pass:'jamandi'},
-      {id:'7', name:'ANDREI',                    sec:'RECE',      pass:'andrei'},
-      {id:'8', name:'CORNELIA',                  sec:'RECE',      pass:'cornelia'},
-      {id:'9', name:'MIHAI',                     sec:'COFETARIE', pass:'mihai'},
-      {id:'10',name:'IULIAN GAGIU GEORGE',        sec:'GRATAR',    pass:'iulian'},
-      {id:'11',name:'LEONARD MOISOI',            sec:'GRATAR',    pass:'leonard'},
-      {id:'12',name:'DAMBAR',                    sec:'VASE',      pass:'dambar'},
-      {id:'13',name:'BITICA MIRELA',             sec:'VASE',      pass:'mirela'},
-      {id:'14',name:'DANI ARMEANCA',             sec:'ALTELE',    pass:'dani'},
-    ],
-    cells:{}
-  };
-})();
-const persist = () => localStorage.setItem('pt6',JSON.stringify(S));
+let S = { emps: [], cells: {} };
 
 function defaultPass(name){return name.split(' ')[0].toLowerCase();}
 
 // ── AUTH STATE ───────────────────────────────────────────
-let currentUser = (() => {
-  try{
-    const u=sessionStorage.getItem('ptUser');if(!u)return null;
-    const p=JSON.parse(u);
-    if(p.role==='employee'&&!S.emps.find(e=>e.id===p.id))return null;
-    return p;
-  }catch(e){return null;}
-})();
+let currentUser = null; // set in init() after data loads
 const isAdmin = ()=>currentUser&&currentUser.role==='admin';
 const isEmp   = ()=>currentUser&&currentUser.role==='employee';
 
@@ -549,6 +538,59 @@ function mStats(y,m){
   return res;
 }
 
+// ── SUPABASE DATA ────────────────────────────────────────
+function parseKey(key){
+  const date=key.slice(-10);          // YYYY-MM-DD
+  const eid=key.slice(0,-11);         // remove trailing -YYYY-MM-DD
+  return{eid,date};
+}
+
+async function loadData(){
+  if(!db){
+    document.getElementById('loading-ovl').innerHTML=`
+      <div style="text-align:center;padding:40px 24px">
+        <div style="font-size:28px;margin-bottom:14px;opacity:.5">⚙️</div>
+        <div style="font-size:14px;font-weight:600;color:var(--ink);margin-bottom:8px">Supabase neconfigurat</div>
+        <div style="font-size:12px;color:var(--ink3);line-height:1.7">Completeaza <b>config.js</b> cu URL-ul<br>si cheia Supabase, apoi reincarca pagina.</div>
+      </div>`;
+    document.getElementById('loading-ovl').style.display='flex';
+    return false;
+  }
+  const[{data:emps,error:e1},{data:cells,error:e2}]=await Promise.all([
+    db.from('angajati').select('id,name,section').order('section').order('name'),
+    db.from('pontaj').select('*')
+  ]);
+  if(e1||e2){toast('Eroare la conectare Supabase');return false;}
+  S.emps=(emps||[]).map(e=>({id:e.id,name:e.name,sec:e.section}));
+  S.cells={};
+  (cells||[]).forEach(c=>{
+    const key=`${c.employee_id}-${c.date}`;
+    const cell={type:c.type};
+    if(c.type==='interval'){cell.s=c.start_hour;cell.e=c.end_hour;}
+    if(c.type==='code'){cell.code=c.code;if(c.approved!=null)cell.approved=c.approved;}
+    S.cells[key]=cell;
+  });
+  return true;
+}
+
+async function saveCell(key,cellData){
+  if(!db)return;
+  const{eid,date}=parseKey(key);
+  const{error}=await db.from('pontaj').upsert({
+    employee_id:eid,date,type:cellData.type,
+    start_hour:cellData.s??null,end_hour:cellData.e??null,
+    code:cellData.code??null,approved:cellData.approved??null
+  },{onConflict:'employee_id,date'});
+  if(error)toast('Eroare la salvare');
+}
+
+async function deleteCell(key){
+  if(!db)return;
+  const{eid,date}=parseKey(key);
+  const{error}=await db.from('pontaj').delete().eq('employee_id',eid).eq('date',date);
+  if(error)toast('Eroare la stergere');
+}
+
 // ── LOGIN ────────────────────────────────────────────────
 function switchLoginTab(role){
   document.querySelectorAll('.ltab').forEach((el,i)=>el.classList.toggle('on',['angajat','admin'][i]===role));
@@ -572,21 +614,31 @@ function toggleEye(inputId,btn){
     :'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
 }
 
-function loginEmp(){
+async function loginEmp(){
   const id=document.getElementById('l-emp-sel').value;
   const pass=document.getElementById('l-emp-pass').value;
-  const emp=S.emps.find(e=>e.id===id);
-  if(!emp){document.getElementById('login-err').textContent='Selecteaza un angajat.';return;}
-  const correct=emp.pass||defaultPass(emp.name);
-  if(pass!==correct){document.getElementById('login-err').textContent='Parola incorecta.';return;}
-  currentUser={role:'employee',id:emp.id,name:emp.name};
+  const errEl=document.getElementById('login-err');errEl.textContent='';
+  if(!id){errEl.textContent='Selecteaza un angajat.';return;}
+  if(!pass){errEl.textContent='Introdu parola.';return;}
+  const btn=document.querySelector('#lf-angajat .btn-login');
+  btn.disabled=true;btn.textContent='Se verifica...';
+  const{data}=await db.from('angajati').select('id,name').eq('id',id).eq('password',pass).maybeSingle();
+  btn.disabled=false;btn.textContent='Intra';
+  if(!data){errEl.textContent='Parola incorecta.';return;}
+  currentUser={role:'employee',id:data.id,name:data.name};
   sessionStorage.setItem('ptUser',JSON.stringify(currentUser));
   showApp();
 }
 
-function loginAdmin(){
+async function loginAdmin(){
   const pass=document.getElementById('l-admin-pass').value;
-  if(pass!==ADMIN_PASS){document.getElementById('login-err').textContent='Parola incorecta.';return;}
+  const errEl=document.getElementById('login-err');errEl.textContent='';
+  if(!pass){errEl.textContent='Introdu parola.';return;}
+  const btn=document.querySelector('#lf-admin .btn-login');
+  btn.disabled=true;btn.textContent='Se verifica...';
+  const{data}=await db.from('setari').select('value').eq('key','admin_pass').maybeSingle();
+  btn.disabled=false;btn.textContent='Intra';
+  if(!data||data.value!==pass){errEl.textContent='Parola incorecta.';return;}
   currentUser={role:'admin'};
   sessionStorage.setItem('ptUser',JSON.stringify(currentUser));
   showApp();
@@ -665,10 +717,11 @@ function renderEmps(){
 
 function askDel(id){document.querySelectorAll('.del-confirm.show').forEach(el=>el.classList.remove('show'));document.getElementById(`dc-${id}`).classList.add('show');}
 function cancelDel(id){document.getElementById(`dc-${id}`).classList.remove('show');}
-function confirmDel(id){
+async function confirmDel(id){
   S.emps=S.emps.filter(e=>e.id!==id);
   Object.keys(S.cells).forEach(k=>{if(k.startsWith(id+'-'))delete S.cells[k];});
-  persist();renderEmps();toast('Angajat sters');
+  renderEmps();toast('Angajat sters');
+  await db.from('angajati').delete().eq('id',id);
 }
 
 // ── RENDER LUNAR ────────────────────────────────────────
@@ -1002,23 +1055,27 @@ function selCode(code){
 function selAppr(val){pkCoAppr=val;document.getElementById('appr-yes').classList.toggle('sel',val===true);document.getElementById('appr-no').classList.toggle('sel',val===false);}
 function closePk(){document.getElementById('pkovl').classList.remove('open');}
 
-function applyPk(){
+async function applyPk(){
   if(!pkKey)return;
+  let cell;
   if(pkSelCode){
     if(pkSelCode==='CO'&&pkCoAppr===null){toast('Selecteaza daca e aprobat sau nu');return;}
-    const cell={type:'code',code:pkSelCode};if(pkSelCode==='CO')cell.approved=pkCoAppr;
-    S.cells[pkKey]=cell;
+    cell={type:'code',code:pkSelCode};if(pkSelCode==='CO')cell.approved=pkCoAppr;
   } else {
-    S.cells[pkKey]={type:'interval',s:getWh(document.getElementById('wh-s')),e:getWh(document.getElementById('wh-e'))};
+    cell={type:'interval',s:getWh(document.getElementById('wh-s')),e:getWh(document.getElementById('wh-e'))};
   }
-  persist();closePk();
+  S.cells[pkKey]=cell;
+  closePk();
   if(curTab==='lunar')renderLunar();else if(curTab==='saptamanal')renderSaptamanal();
+  await saveCell(pkKey,cell);
 }
 
-function clearCell(){
+async function clearCell(){
   if(!pkKey)return;
-  delete S.cells[pkKey];persist();closePk();
+  delete S.cells[pkKey];
+  closePk();
   if(curTab==='lunar')renderLunar();else if(curTab==='saptamanal')renderSaptamanal();
+  await deleteCell(pkKey);
 }
 
 // ── TABS / NAV ───────────────────────────────────────────
@@ -1056,23 +1113,51 @@ function openEdit(id){
   document.getElementById('emp-modal').classList.add('open');
 }
 function closeModal(){document.getElementById('emp-modal').classList.remove('open');}
-function saveEmp(){
+async function saveEmp(){
   const name=document.getElementById('f-name').value.trim().toUpperCase();
   const sec=document.getElementById('f-sec').value;
   if(!name){toast('Introdu un nume');return;}
-  if(editId){const e=S.emps.find(x=>x.id===editId);if(e){e.name=name;e.sec=sec;}toast('Actualizat');}
-  else{S.emps.push({id:uid(),name,sec,pass:defaultPass(name)});toast('Adaugat');}
-  persist();closeModal();renderEmps();
+  closeModal();
+  if(editId){
+    const e=S.emps.find(x=>x.id===editId);if(e){e.name=name;e.sec=sec;}
+    toast('Actualizat');renderEmps();
+    await db.from('angajati').update({name,section:sec}).eq('id',editId);
+  } else {
+    const id=uid(),pass=defaultPass(name);
+    S.emps.push({id,name,sec});
+    toast('Adaugat');renderEmps();
+    await db.from('angajati').insert({id,name,section:sec,password:pass});
+  }
 }
 
 // ── TOAST ───────────────────────────────────────────────
 function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2200);}
 
 // ── INIT ─────────────────────────────────────────────────
-populateLoginSelect();
-if(currentUser){
-  showApp();
-} // else: login screen visible, app hidden (default)
+async function init(){
+  document.getElementById('login-screen').style.display='none';
+  document.getElementById('loading-ovl').style.display='flex';
+
+  const ok=await loadData();
+  if(!ok)return; // loading overlay stays with error message
+
+  document.getElementById('loading-ovl').style.display='none';
+
+  // Restore session
+  try{
+    const u=sessionStorage.getItem('ptUser');
+    if(u){
+      const p=JSON.parse(u);
+      if(p.role==='employee'&&!S.emps.find(e=>e.id===p.id)){sessionStorage.removeItem('ptUser');}
+      else{currentUser=p;}
+    }
+  }catch(e){}
+
+  populateLoginSelect();
+  if(currentUser){showApp();}
+  else{document.getElementById('login-screen').style.display='';}
+}
+init();
 </script>
 </body>
 </html>

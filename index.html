@@ -113,9 +113,11 @@ html,body{background:var(--c1);color:var(--ink);font-family:var(--font);height:1
 .emsv{font-size:10px;color:var(--ink3);}
 .emsv b{font-family:var(--mono);font-weight:600;color:var(--ink);margin-right:2px;}
 .emp-actions{display:flex;gap:8px;flex-shrink:0;}
-.act-icon{width:36px;height:36px;border-radius:8px;border:1px solid var(--rule);background:var(--c1);color:var(--ink2);cursor:pointer;display:flex;align-items:center;justify-content:center;-webkit-appearance:none;flex-shrink:0;}
+.act-icon{width:32px;height:32px;border-radius:6px;border:1px solid var(--rule);background:transparent;color:var(--ink3);cursor:pointer;display:flex;align-items:center;justify-content:center;-webkit-appearance:none;flex-shrink:0;transition:background .12s,color .12s,border-color .12s;}
+.act-icon:hover{background:var(--c2);color:var(--ink);border-color:var(--ink4);}
 .act-icon svg{display:block;flex-shrink:0;}
-.act-icon.red{color:var(--cfp);border-color:#f0caca;background:#fff8f8;}
+.act-icon.red{color:var(--ink3);border-color:var(--rule);background:transparent;}
+.act-icon.red:hover{color:var(--cfp);background:var(--cfp-bg);border-color:#d4a8a8;}
 
 /* ── NAV ── */
 .mnav{display:flex;align-items:center;gap:10px;margin-bottom:14px;}

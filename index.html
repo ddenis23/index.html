@@ -9,7 +9,8 @@
 <title>Pontaj</title>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="config.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-database-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
 <style>
 :root {
@@ -452,11 +453,13 @@ table.mt tr.trow td:first-child{text-align:left;padding-left:10px;font-family:va
 </div><!-- /app -->
 
 <script>
-// ── SUPABASE ─────────────────────────────────────────────
+// ── FIREBASE ─────────────────────────────────────────────
 const _cfg = window.APP_CONFIG || {};
-const db = (_cfg.supabaseUrl && _cfg.supabaseUrl !== 'https://YOUR_PROJECT_ID.supabase.co')
-  ? window.supabase.createClient(_cfg.supabaseUrl, _cfg.supabaseKey)
-  : null;
+let db = null;
+if(_cfg.apiKey && _cfg.apiKey !== 'YOUR_API_KEY'){
+  firebase.initializeApp(_cfg);
+  db = firebase.database();
+}
 
 // ── CONFIG ──────────────────────────────────────────────
 const SEC_ORDER = ['CALD','RECE','COFETARIE','GRATAR','VASE','ALTELE'];
@@ -550,45 +553,41 @@ async function loadData(){
     document.getElementById('loading-ovl').innerHTML=`
       <div style="text-align:center;padding:40px 24px">
         <div style="font-size:28px;margin-bottom:14px;opacity:.5">⚙️</div>
-        <div style="font-size:14px;font-weight:600;color:var(--ink);margin-bottom:8px">Supabase neconfigurat</div>
-        <div style="font-size:12px;color:var(--ink3);line-height:1.7">Completeaza <b>config.js</b> cu URL-ul<br>si cheia Supabase, apoi reincarca pagina.</div>
+        <div style="font-size:14px;font-weight:600;color:var(--ink);margin-bottom:8px">Firebase neconfigurat</div>
+        <div style="font-size:12px;color:var(--ink3);line-height:1.7">Completeaza <b>config.js</b> cu datele<br>proiectului Firebase, apoi reincarca.</div>
       </div>`;
     document.getElementById('loading-ovl').style.display='flex';
     return false;
   }
-  const[{data:emps,error:e1},{data:cells,error:e2}]=await Promise.all([
-    db.from('angajati').select('id,name,section').order('section').order('name'),
-    db.from('pontaj').select('*')
-  ]);
-  if(e1||e2){toast('Eroare la conectare Supabase');return false;}
-  S.emps=(emps||[]).map(e=>({id:e.id,name:e.name,sec:e.section}));
-  S.cells={};
-  (cells||[]).forEach(c=>{
-    const key=`${c.employee_id}-${c.date}`;
-    const cell={type:c.type};
-    if(c.type==='interval'){cell.s=c.start_hour;cell.e=c.end_hour;}
-    if(c.type==='code'){cell.code=c.code;if(c.approved!=null)cell.approved=c.approved;}
-    S.cells[key]=cell;
-  });
-  return true;
+  try{
+    const snap=await db.ref('/').once('value');
+    const data=snap.val()||{};
+    const angajati=data.angajati||{};
+    S.emps=Object.entries(angajati)
+      .map(([id,e])=>({id,name:e.name,sec:e.section}))
+      .sort((a,b)=>SEC_ORDER.indexOf(a.sec)-SEC_ORDER.indexOf(b.sec)||a.name.localeCompare(b.name));
+    const pontaj=data.pontaj||{};
+    S.cells={};
+    Object.entries(pontaj).forEach(([eid,dates])=>{
+      Object.entries(dates||{}).forEach(([date,cell])=>{S.cells[`${eid}-${date}`]=cell;});
+    });
+    return true;
+  }catch(e){toast('Eroare la conectare Firebase');return false;}
 }
 
 async function saveCell(key,cellData){
   if(!db)return;
   const{eid,date}=parseKey(key);
-  const{error}=await db.from('pontaj').upsert({
-    employee_id:eid,date,type:cellData.type,
-    start_hour:cellData.s??null,end_hour:cellData.e??null,
-    code:cellData.code??null,approved:cellData.approved??null
-  },{onConflict:'employee_id,date'});
-  if(error)toast('Eroare la salvare');
+  const row={type:cellData.type};
+  if(cellData.type==='interval'){row.s=cellData.s;row.e=cellData.e;}
+  if(cellData.type==='code'){row.code=cellData.code;if(cellData.approved!=null)row.approved=cellData.approved;}
+  try{await db.ref(`pontaj/${eid}/${date}`).set(row);}catch(e){toast('Eroare la salvare');}
 }
 
 async function deleteCell(key){
   if(!db)return;
   const{eid,date}=parseKey(key);
-  const{error}=await db.from('pontaj').delete().eq('employee_id',eid).eq('date',date);
-  if(error)toast('Eroare la stergere');
+  try{await db.ref(`pontaj/${eid}/${date}`).remove();}catch(e){toast('Eroare la stergere');}
 }
 
 // ── LOGIN ────────────────────────────────────────────────
@@ -622,10 +621,11 @@ async function loginEmp(){
   if(!pass){errEl.textContent='Introdu parola.';return;}
   const btn=document.querySelector('#lf-angajat .btn-login');
   btn.disabled=true;btn.textContent='Se verifica...';
-  const{data}=await db.from('angajati').select('id,name').eq('id',id).eq('password',pass).maybeSingle();
+  const snap=await db.ref(`angajati/${id}`).once('value');
+  const emp=snap.val();
   btn.disabled=false;btn.textContent='Intra';
-  if(!data){errEl.textContent='Parola incorecta.';return;}
-  currentUser={role:'employee',id:data.id,name:data.name};
+  if(!emp||emp.password!==pass){errEl.textContent='Parola incorecta.';return;}
+  currentUser={role:'employee',id,name:emp.name};
   sessionStorage.setItem('ptUser',JSON.stringify(currentUser));
   showApp();
 }
@@ -636,9 +636,9 @@ async function loginAdmin(){
   if(!pass){errEl.textContent='Introdu parola.';return;}
   const btn=document.querySelector('#lf-admin .btn-login');
   btn.disabled=true;btn.textContent='Se verifica...';
-  const{data}=await db.from('setari').select('value').eq('key','admin_pass').maybeSingle();
+  const snap=await db.ref('setari/admin_pass').once('value');
   btn.disabled=false;btn.textContent='Intra';
-  if(!data||data.value!==pass){errEl.textContent='Parola incorecta.';return;}
+  if(!snap.val()||snap.val()!==pass){errEl.textContent='Parola incorecta.';return;}
   currentUser={role:'admin'};
   sessionStorage.setItem('ptUser',JSON.stringify(currentUser));
   showApp();
@@ -721,7 +721,10 @@ async function confirmDel(id){
   S.emps=S.emps.filter(e=>e.id!==id);
   Object.keys(S.cells).forEach(k=>{if(k.startsWith(id+'-'))delete S.cells[k];});
   renderEmps();toast('Angajat sters');
-  await db.from('angajati').delete().eq('id',id);
+  await Promise.all([
+    db.ref(`angajati/${id}`).remove(),
+    db.ref(`pontaj/${id}`).remove()
+  ]);
 }
 
 // ── RENDER LUNAR ────────────────────────────────────────
@@ -1121,12 +1124,12 @@ async function saveEmp(){
   if(editId){
     const e=S.emps.find(x=>x.id===editId);if(e){e.name=name;e.sec=sec;}
     toast('Actualizat');renderEmps();
-    await db.from('angajati').update({name,section:sec}).eq('id',editId);
+    await db.ref(`angajati/${editId}`).update({name,section:sec});
   } else {
     const id=uid(),pass=defaultPass(name);
     S.emps.push({id,name,sec});
     toast('Adaugat');renderEmps();
-    await db.from('angajati').insert({id,name,section:sec,password:pass});
+    await db.ref(`angajati/${id}`).set({name,section:sec,password:pass});
   }
 }
 

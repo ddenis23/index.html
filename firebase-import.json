@@ -1,0 +1,21 @@
+{
+  "angajati": {
+    "1":  { "name": "IONUT BALASA",             "section": "CALD",      "password": "ionut"   },
+    "2":  { "name": "ALEXANDRU PARASCHIV",       "section": "CALD",      "password": "alex"    },
+    "3":  { "name": "BOGDAN MORARU ALEXA",       "section": "CALD",      "password": "bogdan"  },
+    "4":  { "name": "MATEI STELIAN ALEXANDRU",   "section": "CALD",      "password": "matei"   },
+    "5":  { "name": "DIONIS DEMIAN DENIS",       "section": "RECE",      "password": "dionis"  },
+    "6":  { "name": "JAMANDI MARIUS GHEORGHE",   "section": "RECE",      "password": "jamandi" },
+    "7":  { "name": "ANDREI",                    "section": "RECE",      "password": "andrei"  },
+    "8":  { "name": "CORNELIA",                  "section": "RECE",      "password": "cornelia"},
+    "9":  { "name": "MIHAI",                     "section": "COFETARIE", "password": "mihai"   },
+    "10": { "name": "IULIAN GAGIU GEORGE",       "section": "GRATAR",    "password": "iulian"  },
+    "11": { "name": "LEONARD MOISOI",            "section": "GRATAR",    "password": "leonard" },
+    "12": { "name": "DAMBAR",                    "section": "VASE",      "password": "dambar"  },
+    "13": { "name": "BITICA MIRELA",             "section": "VASE",      "password": "mirela"  },
+    "14": { "name": "DANI ARMEANCA",             "section": "ALTELE",    "password": "dani"    }
+  },
+  "setari": {
+    "admin_pass": "Pontaj@2026"
+  }
+}

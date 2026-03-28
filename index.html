@@ -268,8 +268,8 @@ table.mt tr.trow td:first-child{text-align:left;padding-left:10px;font-family:va
   .tab:hover:not(.on){background:var(--c1);color:var(--ink2);}
   /* Header */
   .hdr{padding-left:24px;padding-right:24px;}
-  /* Content */
-  .content{padding:20px 24px 28px;}
+  /* Content — flex column so table fills remaining height */
+  .content{padding:20px 24px 0;display:flex;flex-direction:column;overflow:hidden;}
   /* Modals centered */
   .pkovl,.ovl{align-items:center;justify-content:center;padding:24px;}
   .pksheet{border-radius:18px;max-width:480px;width:100%;transform:translateY(12px) scale(0.97);border:1px solid var(--rule);padding-bottom:20px;max-height:90vh;}
@@ -286,6 +286,29 @@ table.mt tr.trow td:first-child{text-align:left;padding-left:10px;font-family:va
   table.mt td.dtd.clickable:hover .cell{filter:brightness(0.93);}
   /* Employee cards 2-col */
   .emp-sec-wrap{display:grid;grid-template-columns:1fr 1fr;gap:10px 14px;}
+  /* Pages fill available height */
+  .page.on{display:flex;flex-direction:column;flex:1;min-height:0;}
+  .mnav{flex-shrink:0;}
+  .leg{flex-shrink:0;}
+  .tscroll{flex:1;min-height:0;}
+  #pg-angajati.on{overflow-y:auto;padding-bottom:20px;}
+  /* Monthly: fixed table layout fills width, compact cells */
+  #tbl-l{table-layout:fixed;width:100%;}
+  #tbl-l th.nth{width:96px!important;min-width:96px!important;max-width:96px!important;}
+  #tbl-l td.ntd{min-width:96px!important;max-width:96px!important;}
+  #tbl-l th.sth{width:26px!important;min-width:26px!important;}
+  #tbl-l td.std{font-size:9px;padding:0 2px;}
+  #tbl-l th.dth,#tbl-l td.dtd{width:auto!important;min-width:0!important;}
+  #tbl-l .cell{height:30px!important;}
+  #tbl-l .cell-iv{display:none;}
+  #tbl-l .cell-h{font-size:10px;}
+  /* Weekly: fixed layout, more spacious */
+  #tbl-s{table-layout:fixed;width:100%;}
+  #tbl-s th.nth{width:110px!important;min-width:110px!important;max-width:110px!important;}
+  #tbl-s td.ntd{min-width:110px!important;max-width:110px!important;}
+  #tbl-s th.dth,#tbl-s td.dtd{width:auto!important;min-width:0!important;}
+  #tbl-s th.sth{width:50px!important;min-width:50px!important;}
+  #tbl-s .cell{height:42px!important;}
 }
 @media (min-width:1100px){
   .tabs{width:200px;padding:16px 12px;}

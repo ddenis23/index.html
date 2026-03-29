@@ -194,6 +194,16 @@ table.mt tr.trow td:first-child{text-align:left;padding-left:10px;font-family:va
 .cswatch:hover{transform:scale(1.06);}
 .cswatch.sel{border-color:#fff;box-shadow:0 0 0 1.5px var(--ink);}
 
+/* ── TURA ── */
+.tura-filter{display:flex;gap:5px;}
+.tura-btn{height:30px;padding:0 12px;border-radius:6px;border:1px solid var(--rule);background:var(--c2);color:var(--ink3);font-family:var(--font);font-size:11px;font-weight:600;cursor:pointer;letter-spacing:.3px;transition:all .12s;}
+.tura-btn.on{background:var(--ink);color:var(--paper);border-color:var(--ink);}
+.tura-sel{display:flex;gap:8px;margin-top:2px;}
+.tura-opt{flex:1;height:42px;border-radius:8px;border:1px solid var(--rule);background:var(--c1);color:var(--ink2);font-family:var(--font);font-size:14px;font-weight:500;cursor:pointer;transition:all .12s;}
+.tura-opt.on{background:var(--ink);color:var(--paper);border-color:var(--ink);}
+.emp-pass-row{display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--c2);border:1px solid var(--rule);border-radius:8px;margin-bottom:14px;}
+.emp-pass-lbl{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:var(--ink3);flex:1;}
+
 /* ── CONFIRM DELETE ── */
 .del-confirm{position:absolute;inset:0;background:var(--paper);display:none;align-items:center;justify-content:space-between;padding:0 14px;border-radius:var(--r);border:1.5px solid var(--cfp-bg);gap:10px;}
 .del-confirm.show{display:flex;}
@@ -420,6 +430,11 @@ table.mt tr.trow td:first-child{text-align:left;padding-left:10px;font-family:va
       <button class="mnav-btn" onclick="shiftM(-1)">&#8249;</button>
       <div class="mnav-lbl" id="lbl-l">—</div>
       <button class="mnav-btn" onclick="shiftM(1)">&#8250;</button>
+      <div class="tura-filter">
+        <button class="tura-btn on" id="tfl-0" onclick="setTuraL(0)">Toate</button>
+        <button class="tura-btn" id="tfl-1" onclick="setTuraL(1)">T1</button>
+        <button class="tura-btn" id="tfl-2" onclick="setTuraL(2)">T2</button>
+      </div>
       <button class="mnav-act" id="xlsx-btn" onclick="doXLSX()">Descarca XLSX</button>
     </div>
     <div class="leg" id="leg"></div>
@@ -437,6 +452,14 @@ table.mt tr.trow td:first-child{text-align:left;padding-left:10px;font-family:va
   </div>
 
   <div id="pg-angajati" class="page">
+    <div class="mnav">
+      <div class="mnav-lbl">Angajati</div>
+      <div class="tura-filter">
+        <button class="tura-btn on" id="tfa-0" onclick="setTuraA(0)">Toate</button>
+        <button class="tura-btn" id="tfa-1" onclick="setTuraA(1)">Tura 1</button>
+        <button class="tura-btn" id="tfa-2" onclick="setTuraA(2)">Tura 2</button>
+      </div>
+    </div>
     <div id="emp-list"></div>
   </div>
 
@@ -520,6 +543,13 @@ table.mt tr.trow td:first-child{text-align:left;padding-left:10px;font-family:va
       <label>Sectie</label>
       <select id="f-sec"></select>
     </div>
+    <div class="field">
+      <label>Tura</label>
+      <div class="tura-sel">
+        <button type="button" class="tura-opt on" id="tura-btn-1" onclick="setTura(1)">Tura 1</button>
+        <button type="button" class="tura-opt" id="tura-btn-2" onclick="setTura(2)">Tura 2</button>
+      </div>
+    </div>
     <div class="mbtns">
       <button class="btn-cancel" onclick="closeModal()">Anuleaza</button>
       <button class="btn-save"   onclick="saveEmp()">Salveaza</button>
@@ -573,8 +603,8 @@ const SH = [6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22];
 const EH = [8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,0,1,2];
 // ── STATE ────────────────────────────────────────────────
 let S = { emps: [], cells: {}, secs: [] };
+let curTuraL=0, curTuraA=0, editTura=1;
 
-function defaultPass(name){return name.split(' ')[0].toLowerCase();}
 
 // ── AUTH STATE ───────────────────────────────────────────
 let currentUser = null; // set in init() after data loads
@@ -599,6 +629,17 @@ const dow = (y,m,d)=>(new Date(y,m,d).getDay()+6)%7;
 const ch  = (s,e)=>{if(e<=s)e+=24;return e-s;};
 const p2  = n=>String(n).padStart(2,'0');
 const uid = ()=>Date.now().toString(36)+Math.random().toString(36).slice(2,5);
+
+function setTuraL(t){
+  curTuraL=t;
+  [0,1,2].forEach(i=>document.getElementById('tfl-'+i)?.classList.toggle('on',i===t));
+  renderLunar();
+}
+function setTuraA(t){
+  curTuraA=t;
+  [0,1,2].forEach(i=>document.getElementById('tfa-'+i)?.classList.toggle('on',i===t));
+  renderEmps();
+}
 
 function grp(){
   const g={};SEC_ORDER.forEach(s=>g[s]=[]);
@@ -673,7 +714,7 @@ async function loadData(){
     // Employees
     const angajati=data.angajati||{};
     S.emps=Object.entries(angajati)
-      .map(([id,e])=>({id,name:e.name,sec:e.section}))
+      .map(([id,e])=>({id,name:e.name,sec:e.section,tura:e.tura||1}))
       .sort((a,b)=>SEC_ORDER.indexOf(a.sec)-SEC_ORDER.indexOf(b.sec)||a.name.localeCompare(b.name));
     // Cells
     const pontaj=data.pontaj||{};
@@ -724,18 +765,20 @@ function toggleEye(inputId,btn){
 }
 
 async function loginEmp(){
-  const id=document.getElementById('l-emp-sel').value;
+  const selEl=document.getElementById('l-emp-sel');
+  const id=selEl.value;
+  const name=selEl.options[selEl.selectedIndex]?.text||'';
   const pass=document.getElementById('l-emp-pass').value;
   const errEl=document.getElementById('login-err');errEl.textContent='';
   if(!id){errEl.textContent='Selecteaza un angajat.';return;}
   if(!pass){errEl.textContent='Introdu parola.';return;}
   const btn=document.querySelector('#lf-angajat .btn-login');
   btn.disabled=true;btn.textContent='Se verifica...';
-  const snap=await db.ref(`angajati/${id}`).once('value');
-  const emp=snap.val();
+  const snap=await db.ref('setari/emp_pass').once('value');
   btn.disabled=false;btn.textContent='Intra';
-  if(!emp||emp.password!==pass){errEl.textContent='Parola incorecta.';return;}
-  currentUser={role:'employee',id,name:emp.name};
+  if(!snap.val()){errEl.textContent='Parola angajati nu a fost setata. Contacteaza administratorul.';return;}
+  if(snap.val()!==pass){errEl.textContent='Parola incorecta.';return;}
+  currentUser={role:'employee',id,name};
   localStorage.setItem('ptUser',JSON.stringify(currentUser));
   showApp();
 }
@@ -782,8 +825,12 @@ function renderEmps(){
   const stats=mStats(new Date().getFullYear(),new Date().getMonth());
   let html='';
 
-  // Section management (admin only)
+  // Emp pass + section management (admin only)
   if(isAdmin()){
+    html+=`<div class="emp-pass-row">
+      <span class="emp-pass-lbl">Parola angajati</span>
+      <button class="btn-add-sec" onclick="changeEmpPass()">Schimba parola</button>
+    </div>`;
     html+=`<div class="sec-mgmt">
       <div class="sec-hdr"><div class="sec-line"></div><div class="sec-lbl">Sectii</div><div class="sec-line"></div></div>
       <div class="sec-chips">`;
@@ -808,7 +855,9 @@ function renderEmps(){
 
   let any=false;
   SEC_ORDER.forEach(sec=>{
-    const emps=g[sec];if(!emps||!emps.length)return;
+    const all=g[sec];if(!all||!all.length)return;
+    const emps=curTuraA?all.filter(e=>e.tura===curTuraA):all;
+    if(!emps.length)return;
     any=true;const st=SEC_ST[sec];
     html+=`<div>
       <div class="sec-hdr">
@@ -886,7 +935,9 @@ function renderLunar(){
   th+=`<th class="sth">Ore</th><th class="sth" style="color:var(--sp)">SP</th><th class="sth" style="color:var(--co)">CO</th><th class="sth" style="color:var(--cfp)">CFP</th></tr></thead>`;
   let tb='<tbody>';let tH=0,tSP=0,tSPP=0,tCO=0,tCFP=0;
   SEC_ORDER.forEach(sec=>{
-    const emps=g[sec];if(!emps||!emps.length)return;
+    const all=g[sec];if(!all||!all.length)return;
+    const emps=curTuraL?all.filter(e=>e.tura===curTuraL):all;
+    if(!emps.length)return;
     const st=SEC_ST[sec];
     tb+=`<tr class="srow"><td colspan="${days+5}" style="color:${st.c}">${SEC_LBL[sec]}</td></tr>`;
     emps.forEach(e=>{
@@ -1307,11 +1358,17 @@ function fillSecSelect(val){
   const sel=document.getElementById('f-sec');
   sel.innerHTML=S.secs.map(s=>`<option value="${s.id}"${s.id===val?' selected':''}>${s.label}</option>`).join('');
 }
+function setTura(t){
+  editTura=t;
+  document.getElementById('tura-btn-1').classList.toggle('on',t===1);
+  document.getElementById('tura-btn-2').classList.toggle('on',t===2);
+}
 function openAdd(){
   editId=null;
   document.getElementById('modal-title').textContent='Angajat nou';
   document.getElementById('f-name').value='';
   fillSecSelect(SEC_ORDER[0]);
+  setTura(1);
   document.getElementById('emp-modal').classList.add('open');
   setTimeout(()=>document.getElementById('f-name').focus(),350);
 }
@@ -1321,6 +1378,7 @@ function openEdit(id){
   document.getElementById('modal-title').textContent='Editeaza angajat';
   document.getElementById('f-name').value=e.name;
   fillSecSelect(e.sec);
+  setTura(e.tura||1);
   document.getElementById('emp-modal').classList.add('open');
 }
 function closeModal(){document.getElementById('emp-modal').classList.remove('open');}
@@ -1330,15 +1388,21 @@ async function saveEmp(){
   if(!name){toast('Introdu un nume');return;}
   closeModal();
   if(editId){
-    const e=S.emps.find(x=>x.id===editId);if(e){e.name=name;e.sec=sec;}
+    const e=S.emps.find(x=>x.id===editId);if(e){e.name=name;e.sec=sec;e.tura=editTura;}
     toast('Actualizat');renderEmps();
-    await db.ref(`angajati/${editId}`).update({name,section:sec});
+    await db.ref(`angajati/${editId}`).update({name,section:sec,tura:editTura});
   } else {
-    const id=uid(),pass=defaultPass(name);
-    S.emps.push({id,name,sec});
+    const id=uid();
+    S.emps.push({id,name,sec,tura:editTura});
     toast('Adaugat');renderEmps();
-    await db.ref(`angajati/${id}`).set({name,section:sec,password:pass});
+    await db.ref(`angajati/${id}`).set({name,section:sec,tura:editTura});
   }
+}
+async function changeEmpPass(){
+  const p=prompt('Parola noua pentru toti angajatii:');
+  if(!p||!p.trim())return;
+  await db.ref('setari/emp_pass').set(p.trim());
+  toast('Parola angajati actualizata');
 }
 
 // ── TOAST ───────────────────────────────────────────────

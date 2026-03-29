@@ -345,7 +345,6 @@ table.mt tr.trow td:first-child{text-align:left;padding-left:10px;font-family:va
 #loading-ovl span{font-size:12px;color:var(--ink3);letter-spacing:.4px;}
 
 @media (min-width:1440px){
-  #app{max-width:1440px;margin:0 auto;box-shadow:0 0 60px rgba(30,26,18,.1);}
   .tabs{width:220px;}
 }
 </style>
@@ -446,6 +445,11 @@ table.mt tr.trow td:first-child{text-align:left;padding-left:10px;font-family:va
       <button class="mnav-btn" onclick="shiftW(-1)">&#8249;</button>
       <div class="mnav-lbl" id="lbl-s">—</div>
       <button class="mnav-btn" onclick="shiftW(1)">&#8250;</button>
+      <div class="tura-filter">
+        <button class="tura-btn on" id="tfs-0" onclick="setTuraS(0)">Toate</button>
+        <button class="tura-btn" id="tfs-1" onclick="setTuraS(1)">T1</button>
+        <button class="tura-btn" id="tfs-2" onclick="setTuraS(2)">T2</button>
+      </div>
       <button class="mnav-act" onclick="goToday()">Azi</button>
     </div>
     <div class="tscroll"><table class="mt" id="tbl-s"></table></div>
@@ -603,7 +607,7 @@ const SH = [6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22];
 const EH = [8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,0,1,2];
 // ── STATE ────────────────────────────────────────────────
 let S = { emps: [], cells: {}, secs: [] };
-let curTuraL=0, curTuraA=0, editTura=1;
+let curTuraL=0, curTuraS=0, curTuraA=0, editTura=1;
 
 
 // ── AUTH STATE ───────────────────────────────────────────
@@ -634,6 +638,11 @@ function setTuraL(t){
   curTuraL=t;
   [0,1,2].forEach(i=>document.getElementById('tfl-'+i)?.classList.toggle('on',i===t));
   renderLunar();
+}
+function setTuraS(t){
+  curTuraS=t;
+  [0,1,2].forEach(i=>document.getElementById('tfs-'+i)?.classList.toggle('on',i===t));
+  renderSaptamanal();
 }
 function setTuraA(t){
   curTuraA=t;
@@ -924,7 +933,6 @@ function renderLunar(){
     <span class="lpill" style="background:var(--cfp-bg);color:var(--cfp)">CFP</span>
     <span class="lpill" style="background:var(--off-bg);color:var(--off)">OFF</span>
     <span class="lpill" style="background:var(--c2);color:var(--ink2)">ore auto</span>`;
-  const g=grp();
   const today=new Date();
   let th=`<thead><tr><th class="nth">Angajat</th>`;
   for(let d=1;d<=days;d++){
@@ -934,12 +942,11 @@ function renderLunar(){
   }
   th+=`<th class="sth">Ore</th><th class="sth" style="color:var(--sp)">SP</th><th class="sth" style="color:var(--co)">CO</th><th class="sth" style="color:var(--cfp)">CFP</th></tr></thead>`;
   let tb='<tbody>';let tH=0,tSP=0,tSPP=0,tCO=0,tCFP=0;
-  SEC_ORDER.forEach(sec=>{
-    const all=g[sec];if(!all||!all.length)return;
-    const emps=curTuraL?all.filter(e=>e.tura===curTuraL):all;
+  [1,2].forEach(tura=>{
+    if(curTuraL && curTuraL!==tura)return;
+    const emps=S.emps.filter(e=>e.tura===tura);
     if(!emps.length)return;
-    const st=SEC_ST[sec];
-    tb+=`<tr class="srow"><td colspan="${days+5}" style="color:${st.c}">${SEC_LBL[sec]}</td></tr>`;
+    tb+=`<tr class="srow"><td colspan="${days+5}">Tura ${tura}</td></tr>`;
     emps.forEach(e=>{
       let h=0,sp=0,spp=0,co=0,cfp=0;
       const isMe=isEmp()&&currentUser.id===e.id;
@@ -971,7 +978,7 @@ function renderSaptamanal(){
   else lbl+=' – '+d6.getDate()+' '+MO[d6.getMonth()];
   lbl+=' '+d6.getFullYear();
   document.getElementById('lbl-s').textContent=lbl;
-  const today=new Date();const g=grp();
+  const today=new Date();
   let th=`<thead><tr><th class="nth">Angajat</th>`;
   days.forEach(date=>{
     const w=(date.getDay()+6)%7;const isToday=date.toDateString()===today.toDateString();
@@ -979,10 +986,11 @@ function renderSaptamanal(){
   });
   th+=`<th class="sth">Ore</th></tr></thead>`;
   let tb='<tbody>';
-  SEC_ORDER.forEach(sec=>{
-    const emps=g[sec];if(!emps||!emps.length)return;
-    const st=SEC_ST[sec];
-    tb+=`<tr class="srow"><td colspan="9" style="color:${st.c}">${SEC_LBL[sec]}</td></tr>`;
+  [1,2].forEach(tura=>{
+    if(curTuraS && curTuraS!==tura)return;
+    const emps=S.emps.filter(e=>e.tura===tura);
+    if(!emps.length)return;
+    tb+=`<tr class="srow"><td colspan="9">Tura ${tura}</td></tr>`;
     emps.forEach(e=>{
       let h=0;
       const isMe=isEmp()&&currentUser.id===e.id;

@@ -364,13 +364,7 @@ table.mt tr.trow td:first-child{text-align:left;padding-left:10px;font-family:va
     <!-- Angajat form -->
     <div class="login-form show" id="lf-angajat">
       <div class="lfield">
-        <label>Selecteaza angajat</label>
-        <div class="lfield-wrap">
-          <select id="l-emp-sel"></select>
-        </div>
-      </div>
-      <div class="lfield">
-        <label>Parola</label>
+        <label>Parola angajati</label>
         <div class="lfield-wrap">
           <input id="l-emp-pass" type="password" placeholder="••••••" autocomplete="current-password">
           <button class="eye-btn" type="button" onclick="toggleEye('l-emp-pass',this)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
@@ -606,7 +600,7 @@ const DF  = ['Luni','Marti','Miercuri','Joi','Vineri','Sambata','Duminica'];
 const SH = [6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22];
 const EH = [8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,0,1,2];
 // ── STATE ────────────────────────────────────────────────
-let S = { emps: [], cells: {}, secs: [] };
+let S = { emps: [], cells: {}, secs: [], empPass:'' };
 let curTuraL=0, curTuraS=0, curTuraA=0, editTura=1;
 
 
@@ -731,6 +725,7 @@ async function loadData(){
     Object.entries(pontaj).forEach(([eid,dates])=>{
       Object.entries(dates||{}).forEach(([date,cell])=>{S.cells[`${eid}-${date}`]=cell;});
     });
+    S.empPass=(data.setari?.emp_pass)||'';
     return true;
   }catch(e){toast('Eroare la conectare Firebase');return false;}
 }
@@ -758,12 +753,6 @@ function switchLoginTab(role){
   document.getElementById('login-err').textContent='';
 }
 
-function populateLoginSelect(){
-  const sel=document.getElementById('l-emp-sel');
-  sel.innerHTML='<option value="">-- Selecteaza angajat --</option>';
-  S.emps.forEach(e=>{const o=document.createElement('option');o.value=e.id;o.textContent=e.name;sel.appendChild(o);});
-}
-
 function toggleEye(inputId,btn){
   const inp=document.getElementById(inputId);
   const show=inp.type==='password';
@@ -774,12 +763,8 @@ function toggleEye(inputId,btn){
 }
 
 async function loginEmp(){
-  const selEl=document.getElementById('l-emp-sel');
-  const id=selEl.value;
-  const name=selEl.options[selEl.selectedIndex]?.text||'';
   const pass=document.getElementById('l-emp-pass').value;
   const errEl=document.getElementById('login-err');errEl.textContent='';
-  if(!id){errEl.textContent='Selecteaza un angajat.';return;}
   if(!pass){errEl.textContent='Introdu parola.';return;}
   const btn=document.querySelector('#lf-angajat .btn-login');
   btn.disabled=true;btn.textContent='Se verifica...';
@@ -787,7 +772,7 @@ async function loginEmp(){
   btn.disabled=false;btn.textContent='Intra';
   if(!snap.val()){errEl.textContent='Parola angajati nu a fost setata. Contacteaza administratorul.';return;}
   if(snap.val()!==pass){errEl.textContent='Parola incorecta.';return;}
-  currentUser={role:'employee',id,name};
+  currentUser={role:'employee'};
   localStorage.setItem('ptUser',JSON.stringify(currentUser));
   showApp();
 }
@@ -813,14 +798,13 @@ function logout(){
   document.getElementById('l-emp-pass').value='';
   document.getElementById('l-admin-pass').value='';
   document.getElementById('login-err').textContent='';
-  populateLoginSelect();
 }
 
 function showApp(){
   document.getElementById('login-screen').style.display='none';
   document.getElementById('app').style.display='';
   // Update user label
-  document.getElementById('user-lbl').textContent=isAdmin()?'Admin':currentUser.name.split(' ')[0];
+  document.getElementById('user-lbl').textContent=isAdmin()?'Admin':'Angajat';
   // XLSX only for admin
   document.getElementById('xlsx-btn').style.display=isAdmin()?'':'none';
   // + Angajat only for admin
@@ -838,7 +822,9 @@ function renderEmps(){
   if(isAdmin()){
     html+=`<div class="emp-pass-row">
       <span class="emp-pass-lbl">Parola angajati</span>
-      <button class="btn-add-sec" onclick="changeEmpPass()">Schimba parola</button>
+      <span id="emp-pass-val" style="font-family:var(--mono);font-size:13px;font-weight:600;color:var(--ink);flex:1">${S.empPass?'•'.repeat(S.empPass.length):'—'}</span>
+      ${S.empPass?`<button class="sec-chip-btn" id="emp-pass-eye" onclick="toggleEmpPassViz()" style="width:26px;height:26px;flex-shrink:0"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>`:''}
+      <button class="btn-add-sec" onclick="changeEmpPass()">Schimba</button>
     </div>`;
     html+=`<div class="sec-mgmt">
       <div class="sec-hdr"><div class="sec-line"></div><div class="sec-lbl">Sectii</div><div class="sec-line"></div></div>
@@ -1406,11 +1392,23 @@ async function saveEmp(){
     await db.ref(`angajati/${id}`).set({name,section:sec,tura:editTura});
   }
 }
+let empPassVisible=false;
+function toggleEmpPassViz(){
+  empPassVisible=!empPassVisible;
+  const val=document.getElementById('emp-pass-val');
+  if(val)val.textContent=empPassVisible?S.empPass:'•'.repeat(S.empPass.length);
+  const eye=document.getElementById('emp-pass-eye');
+  if(eye)eye.innerHTML=empPassVisible
+    ?'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>'
+    :'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
+}
 async function changeEmpPass(){
   const p=prompt('Parola noua pentru toti angajatii:');
   if(!p||!p.trim())return;
+  S.empPass=p.trim();empPassVisible=false;
   await db.ref('setari/emp_pass').set(p.trim());
   toast('Parola angajati actualizata');
+  renderEmps();
 }
 
 // ── TOAST ───────────────────────────────────────────────
@@ -1429,14 +1427,9 @@ async function init(){
   // Restore session
   try{
     const u=localStorage.getItem('ptUser');
-    if(u){
-      const p=JSON.parse(u);
-      if(p.role==='employee'&&!S.emps.find(e=>e.id===p.id)){localStorage.removeItem('ptUser');}
-      else{currentUser=p;}
-    }
+    if(u){currentUser=JSON.parse(u);}
   }catch(e){}
 
-  populateLoginSelect();
   if(currentUser){showApp();}
   else{document.getElementById('login-screen').style.display='';}
 }

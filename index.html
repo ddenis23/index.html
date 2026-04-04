@@ -508,6 +508,18 @@ table.mt tr.trow td:first-child{text-align:left;padding-left:10px;font-family:va
   </div>
 </div>
 
+<!-- CELL INFO (read-only for employees) -->
+<div class="pkovl" id="cell-info-ovl" onclick="closeCellInfo()">
+  <div class="pksheet" onclick="event.stopPropagation()">
+    <div class="pk-handle"></div>
+    <div class="pk-head">
+      <div class="pk-emp" id="ci-emp">—</div>
+      <div class="pk-date" id="ci-date">—</div>
+    </div>
+    <div id="ci-body" style="padding:20px 18px 24px"></div>
+  </div>
+</div>
+
 <!-- SECTION MODAL -->
 <div class="ovl" id="sec-modal">
   <div class="msheet">
@@ -992,8 +1004,9 @@ function renderLunar(){
         const w=dow(y,m,d);const isToday2=y===today.getFullYear()&&m===today.getMonth()&&d===today.getDate();
         const key=ck(e.id,y,m,d);const cell=S.cells[key];const dis=cellDisp(cell);
         if(cell){if(cell.type==='interval')h+=ch(cell.s,cell.e);if(cell.type==='code'){if(cell.code==='SP')sp++;if(cell.code==='SP+')spp++;if(cell.code==='CO')co++;if(cell.code==='CFP')cfp++;}}
-        const click=isAdmin()?`onclick="openPk('${key}','${e.id}',${y},${m},${d},'${e.name.replace(/'/g,"\\'")}')"`:'';
-        tb+=`<td class="dtd${w>=5?' we':''}${isToday2?' today':''}${isAdmin()?' clickable':''}" ${click}>
+        const en=e.name.replace(/'/g,"\\'");
+        const click=isAdmin()?`onclick="openPk('${key}','${e.id}',${y},${m},${d},'${en}')"`:`onclick="openCellInfo('${key}','${en}',${y},${m},${d})"`;
+        tb+=`<td class="dtd${w>=5?' we':''}${isToday2?' today':''} clickable" ${click}>
           <div class="cell ${dis.cls}"><div class="cell-h">${dis.h||'·'}</div>${dis.iv?`<div class="cell-iv">${dis.iv}</div>`:''}</div></td>`;
       }
       const spTotal=sp+spp*1.5;
@@ -1036,8 +1049,9 @@ function renderSaptamanal(){
         const y=date.getFullYear(),m=date.getMonth(),d=date.getDate();
         const w=(date.getDay()+6)%7;const key=ck(e.id,y,m,d);const cell=S.cells[key];const dis=cellDisp(cell);
         if(cell&&cell.type==='interval')h+=ch(cell.s,cell.e);
-        const click=isAdmin()?`onclick="openPk('${key}','${e.id}',${y},${m},${d},'${e.name.replace(/'/g,"\\'")}')"`:'';
-        tb+=`<td class="dtd${w>=5?' we':''}${isAdmin()?' clickable':''}" ${click}>
+        const en=e.name.replace(/'/g,"\\'");
+        const click=isAdmin()?`onclick="openPk('${key}','${e.id}',${y},${m},${d},'${en}')"`:`onclick="openCellInfo('${key}','${en}',${y},${m},${d})"`;
+        tb+=`<td class="dtd${w>=5?' we':''} clickable" ${click}>
           <div class="cell ${dis.cls}"><div class="cell-h">${dis.h||'·'}</div>${dis.iv?`<div class="cell-iv">${dis.iv}</div>`:''}</div></td>`;
       });
       tb+=`<td class="std">${h||'—'}</td></tr>`;
@@ -1246,6 +1260,35 @@ function buildWh(el,items,def){
 function getWh(el){const i=Math.round(el.scrollTop/38);const it=el.querySelectorAll('.wh-item')[i];return it?parseInt(it.dataset.v):0;}
 function updComp(){document.getElementById('comp-h').textContent=ch(getWh(document.getElementById('wh-s')),getWh(document.getElementById('wh-e')));}
 function resetCodeBtns(){['SP','SPP','CO','CFP','OFF'].forEach(id=>document.getElementById('cbtn-'+id)?.classList.remove('sel'));}
+
+function openCellInfo(key,empName,y,m,d){
+  const cell=S.cells[key];
+  const w=dow(y,m,d);
+  document.getElementById('ci-emp').textContent=empName;
+  document.getElementById('ci-date').textContent=`${DF[w]}, ${d} ${MO[m]} ${y}`;
+  let body='';
+  if(!cell){
+    body=`<div style="text-align:center;color:var(--ink3);font-size:14px;padding:8px 0">Nicio inregistrare</div>`;
+  } else if(cell.type==='interval'){
+    const h=ch(cell.s,cell.e);
+    body=`<div style="text-align:center">
+      <div style="font-family:var(--mono);font-size:34px;font-weight:700;color:var(--ink);letter-spacing:-.5px">${p2(cell.s)}:00 – ${p2(cell.e)}:00</div>
+      <div style="font-size:13px;color:var(--ink3);margin-top:8px">${h} ore lucrate</div>
+    </div>`;
+  } else if(cell.type==='code'){
+    const CI={SP:{label:'Supliment',bg:'var(--sp-bg)',c:'var(--sp)'},'SP+':{label:'Supliment x1.5',bg:'var(--spp-bg)',c:'var(--spp)'},CO:{label:'Concediu',bg:'var(--co-bg)',c:'var(--co)'},CFP:{label:'Fara plata',bg:'var(--cfp-bg)',c:'var(--cfp)'},OFF:{label:'Zi libera',bg:'var(--off-bg)',c:'var(--off)'}};
+    const ci=CI[cell.code]||{label:cell.code,bg:'var(--c2)',c:'var(--ink)'};
+    let extra='';
+    if(cell.code==='CO'){if(cell.approved===true)extra=' · Aprobat';else if(cell.approved===false)extra=' · Neaprobat';}
+    body=`<div style="text-align:center">
+      <div style="display:inline-block;background:${ci.bg};color:${ci.c};padding:12px 28px;border-radius:10px;font-size:22px;font-weight:700;letter-spacing:.5px">${cell.code}${extra}</div>
+      <div style="font-size:13px;color:var(--ink3);margin-top:12px">${ci.label}</div>
+    </div>`;
+  }
+  document.getElementById('ci-body').innerHTML=body;
+  document.getElementById('cell-info-ovl').classList.add('open');
+}
+function closeCellInfo(){document.getElementById('cell-info-ovl').classList.remove('open');}
 
 function openPk(key,eid,y,m,d,name){
   pkKey=key;pkSelCode=null;pkCoAppr=null;

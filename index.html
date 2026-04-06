@@ -41,7 +41,8 @@ window.APP_CONFIG = {
   --cfp:    #7a1818; --cfp-bg: #fce8e8;
   --off:    #6a6258; --off-bg: #eeebe4;
   --lfp:    #7a1818; --lfp-bg: #fce8e8;
-  --lp:     #6a6258; --lp-bg:  #eeebe4;
+  --lp:     #0f6a67; --lp-bg:  #e2f4f3;
+  --cm:     #8a2d5a; --cm-bg:  #f6e3ed;
   --inactive:#8b816f; --inactive-bg:#f4efe6;
   --st: env(safe-area-inset-top,0px);
   --sb: env(safe-area-inset-bottom,0px);
@@ -165,7 +166,9 @@ table.mt tr.my-row:hover td.ntd{background:#d8e8ff !important;}
 .cell.vco {background:var(--co-bg); color:var(--co);}
 .cell.vcon{background:var(--con-bg);color:var(--con);}
 .cell.vcfp,.cell.vlfp{background:var(--lfp-bg);color:var(--lfp);}
-.cell.voff,.cell.vlp{background:var(--lp-bg);color:var(--lp);}
+.cell.voff{background:var(--off-bg);color:var(--off);}
+.cell.vlp{background:var(--lp-bg);color:var(--lp);}
+.cell.vcm{background:var(--cm-bg);color:var(--cm);}
 .cell.vinactive{background:var(--inactive-bg);color:var(--inactive);border:1px dashed var(--rule);}
 .cell.vhrs{background:var(--c1);color:var(--ink);}
 .cell-h{font-size:13px;font-weight:700;line-height:1;font-family:var(--mono);}
@@ -176,6 +179,7 @@ table.mt td.std.sp{color:var(--sp);}
 table.mt td.std.spp{color:var(--spp);}
 table.mt td.std.co{color:var(--co);}
 table.mt td.std.cfp,table.mt td.std.lfp{color:var(--lfp);}
+table.mt td.std.cm{color:var(--cm);}
 table.mt tr.trow td{background:var(--c3);border-top:2px solid var(--rule);font-weight:600;font-size:11px;text-align:center;padding:8px 4px;font-family:var(--mono);}
 table.mt tr.trow td:first-child{text-align:left;padding-left:10px;font-family:var(--font);font-size:10px;letter-spacing:.5px;text-transform:uppercase;color:var(--ink2);}
 table.mt td.dtd.locked{cursor:not-allowed;background:#f8f4ec;}
@@ -249,7 +253,6 @@ table.mt td.dtd.locked .cell{opacity:.92;}
 .cbtn{height:52px;border-radius:8px;border:2px solid transparent;font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;letter-spacing:.2px;-webkit-appearance:none;transition:border-color .12s,filter .1s;}
 .cbtn:active{filter:brightness(.9);}
 .cbtn.sel{border-color:currentColor;}
-#cbtn-CFP,#cbtn-OFF{display:none;}
 .co-appr{display:none;padding:0 18px 16px;animation:fadeIn .15s ease;}
 .co-appr.show{display:block;}
 .appr-lbl{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:var(--ink3);margin-bottom:10px;}
@@ -497,14 +500,14 @@ table.mt td.dtd.locked .cell{opacity:.92;}
         <button class="cbtn" id="cbtn-SP"  style="background:var(--sp-bg);color:var(--sp)"   onclick="selCode('SP')">SP — Supliment</button>
         <button class="cbtn" id="cbtn-SPP" style="background:var(--spp-bg);color:var(--spp)" onclick="selCode('SP+')">SP+ — x1.5</button>
         <button class="cbtn" id="cbtn-CO"  style="background:var(--co-bg);color:var(--co)"   onclick="selCode('CO')">CO — Concediu</button>
-        <button class="cbtn" id="cbtn-CFP" style="background:var(--cfp-bg);color:var(--cfp)" onclick="selCode('CFP')">CFP — Fara plata</button>
-        <button class="cbtn" id="cbtn-OFF" style="background:var(--off-bg);color:var(--off);grid-column:span 2" onclick="selCode('OFF')">OFF — Liber</button>
+        <button class="cbtn" id="cbtn-CM"  style="background:var(--cm-bg);color:var(--cm)"   onclick="selCode('CM')">CM — Medical</button>
       </div>
     </div>
     <div class="codes" style="padding-top:0">
       <div class="cgrid">
-        <button class="cbtn" id="cbtn-LFP" style="background:var(--lfp-bg);color:var(--lfp)" onclick="selCode('LFP')">LFP - Liber fara plata</button>
-        <button class="cbtn" id="cbtn-LP"  style="background:var(--lp-bg);color:var(--lp);grid-column:span 2" onclick="selCode('LP')">LP - Liber cu plata</button>
+        <button class="cbtn" id="cbtn-OFF" style="background:var(--off-bg);color:var(--off)" onclick="selCode('OFF')">OFF - Liber</button>
+        <button class="cbtn" id="cbtn-LP"  style="background:var(--lp-bg);color:var(--lp)" onclick="selCode('LP')">LP - Liber cu plata</button>
+        <button class="cbtn" id="cbtn-LFP" style="background:var(--lfp-bg);color:var(--lfp);grid-column:span 2" onclick="selCode('LFP')">LFP - Liber fara plata</button>
       </div>
     </div>
     <div class="co-appr" id="co-appr">
@@ -668,7 +671,7 @@ const ch  = (s,e)=>{if(e<=s)e+=24;return e-s;};
 const p2  = n=>String(n).padStart(2,'0');
 const uid = ()=>Date.now().toString(36)+Math.random().toString(36).slice(2,5);
 const isoDate = d=>`${d.getFullYear()}-${p2(d.getMonth()+1)}-${p2(d.getDate())}`;
-const normalizeCode = code=>({CFP:'LFP',OFF:'LP'})[code]||code;
+const normalizeCode = code=>({CFP:'LFP'})[code]||code;
 const codeBtnId = code=>`cbtn-${normalizeCode(code)==='SP+'?'SPP':normalizeCode(code)}`;
 
 function getEmpById(id){return S.emps.find(e=>e.id===id)||null;}
@@ -694,7 +697,7 @@ function getCellLockReason(e,dateStr){
   return '';
 }
 function getInactiveCellDisp(){return{cls:'vinactive',h:'IN',iv:''};}
-function createStats(){return{h:0,sp:0,spp:0,co:0,lfp:0};}
+function createStats(){return{h:0,sp:0,spp:0,co:0,cm:0,lfp:0};}
 function addCellToStats(stats,cell){
   if(!cell)return;
   if(cell.type==='interval'){stats.h+=ch(cell.s,cell.e);return;}
@@ -703,6 +706,7 @@ function addCellToStats(stats,cell){
   if(code==='SP')stats.sp++;
   else if(code==='SP+')stats.spp++;
   else if(code==='CO')stats.co++;
+  else if(code==='CM')stats.cm++;
   else if(code==='LFP')stats.lfp++;
 }
 
@@ -746,7 +750,7 @@ function cellDisp(c){
       if(c.approved===false)return{cls:'vcon',h:'CO',iv:'N'};
       return{cls:'vco',h:'CO',iv:c.approved===true?'A':''};
     }
-    const cls={SP:'vsp','SP+':'vspp',LFP:'vlfp',LP:'vlp'}[code]||'';
+    const cls={SP:'vsp','SP+':'vspp',OFF:'voff',LP:'vlp',LFP:'vlfp',CM:'vcm'}[code]||'';
     return{cls,h:code,iv:''};
   }
   if(c.type==='interval')return{cls:'vhrs',h:`${ch(c.s,c.e)}h`,iv:`${p2(c.s)}-${p2(c.e)}`};
@@ -973,6 +977,7 @@ function renderEmps(){
       const empSP=s.sp+s.spp*1.5;
       if(empSP)parts.push(`<span class="emsv" style="color:var(--sp)"><b>${empSP}</b>SP</span>`);
       if(s.co)parts.push(`<span class="emsv" style="color:var(--co)"><b>${s.co}</b>CO</span>`);
+      if(s.cm)parts.push(`<span class="emsv" style="color:var(--cm)"><b>${s.cm}</b>CM</span>`);
       if(s.lfp)parts.push(`<span class="emsv" style="color:var(--lfp)"><b>${s.lfp}</b>LFP</span>`);
       const statsHtml=parts.length?`<div class="emp-mini-stats">${parts.join('')}</div>`:'';
       const info=[SEC_LBL[sec]];
@@ -1044,8 +1049,10 @@ function renderLunar(){
     <span class="lpill" style="background:var(--spp-bg);color:var(--spp)">SP+</span>
     <span class="lpill" style="background:var(--co-bg);color:var(--co)">CO &#10003;</span>
     <span class="lpill" style="background:var(--con-bg);color:var(--con)">CO N</span>
-    <span class="lpill" style="background:var(--lfp-bg);color:var(--lfp)">LFP</span>
+    <span class="lpill" style="background:var(--cm-bg);color:var(--cm)">CM</span>
+    <span class="lpill" style="background:var(--off-bg);color:var(--off)">OFF</span>
     <span class="lpill" style="background:var(--lp-bg);color:var(--lp)">LP</span>
+    <span class="lpill" style="background:var(--lfp-bg);color:var(--lfp)">LFP</span>
     <span class="lpill" style="background:var(--inactive-bg);color:var(--inactive)">IN</span>
     <span class="lpill" style="background:var(--c2);color:var(--ink2)">ore auto</span>`;
   const today=new Date();
@@ -1055,15 +1062,15 @@ function renderLunar(){
     const isToday=y===today.getFullYear()&&m===today.getMonth()&&d===today.getDate();
     th+=`<th class="dth${w>=5?' weth':''}${isToday?' tdth':''}"><span class="dth-n">${d}</span><span class="dth-d">${DS[w]}</span></th>`;
   }
-  th+=`<th class="sth">Ore</th><th class="sth" style="color:var(--sp)">SP</th><th class="sth" style="color:var(--co)">CO</th><th class="sth" style="color:var(--lfp)">LFP</th></tr></thead>`;
-  let tb='<tbody>';let tH=0,tSP=0,tSPP=0,tCO=0,tCFP=0;
+  th+=`<th class="sth">Ore</th><th class="sth" style="color:var(--sp)">SP</th><th class="sth" style="color:var(--co)">CO</th><th class="sth" style="color:var(--cm)">CM</th><th class="sth" style="color:var(--lfp)">LFP</th></tr></thead>`;
+  let tb='<tbody>';let tH=0,tSP=0,tSPP=0,tCO=0,tCM=0,tLFP=0;
   [1,2].forEach(tura=>{
     if(curTuraL && curTuraL!==tura)return;
     const emps=S.emps.filter(e=>e.tura===tura&&isEmpActiveInMonth(e,y,m));
     if(!emps.length)return;
-    tb+=`<tr class="srow"><td colspan="${days+5}">Tura ${tura}</td></tr>`;
+    tb+=`<tr class="srow"><td colspan="${days+6}">Tura ${tura}</td></tr>`;
     emps.forEach(e=>{
-      let h=0,sp=0,spp=0,co=0,cfp=0;
+      let h=0,sp=0,spp=0,co=0,cm=0,lfp=0;
       const isMe=isEmp()&&currentUser.id===e.id;
       tb+=`<tr class="drow${isMe?' my-row':''}"><td class="ntd">${e.name}</td>`;
       for(let d=1;d<=days;d++){
@@ -1080,7 +1087,8 @@ function renderLunar(){
             if(code==='SP')sp++;
             else if(code==='SP+')spp++;
             else if(code==='CO')co++;
-            else if(code==='LFP')cfp++;
+            else if(code==='CM')cm++;
+            else if(code==='LFP')lfp++;
           }
         }
         const en=e.name.replace(/'/g,"\\'");
@@ -1089,12 +1097,12 @@ function renderLunar(){
           <div class="cell ${dis.cls}"><div class="cell-h">${dis.h||'·'}</div>${dis.iv?`<div class="cell-iv">${dis.iv}</div>`:''}</div></td>`;
       }
       const spTotal=sp+spp*1.5;
-      tH+=h;tSP+=sp;tSPP+=spp;tCO+=co;tCFP+=cfp;
-      tb+=`<td class="std">${h||'—'}</td><td class="std sp">${spTotal||'—'}</td><td class="std co">${co||'—'}</td><td class="std cfp">${cfp||'—'}</td></tr>`;
+      tH+=h;tSP+=sp;tSPP+=spp;tCO+=co;tCM+=cm;tLFP+=lfp;
+      tb+=`<td class="std">${h||'—'}</td><td class="std sp">${spTotal||'—'}</td><td class="std co">${co||'—'}</td><td class="std cm">${cm||'—'}</td><td class="std lfp">${lfp||'—'}</td></tr>`;
     });
   });
   const tSpTotal=tSP+tSPP*1.5;
-  tb+=`<tr class="trow"><td>Total</td>${Array(days).fill('<td></td>').join('')}<td>${tH}</td><td style="color:var(--sp)">${tSpTotal||'—'}</td><td style="color:var(--co)">${tCO||'—'}</td><td style="color:var(--cfp)">${tCFP||'—'}</td></tr></tbody>`;
+  tb+=`<tr class="trow"><td>Total</td>${Array(days).fill('<td></td>').join('')}<td>${tH}</td><td style="color:var(--sp)">${tSpTotal||'—'}</td><td style="color:var(--co)">${tCO||'—'}</td><td style="color:var(--cm)">${tCM||'—'}</td><td style="color:var(--lfp)">${tLFP||'—'}</td></tr></tbody>`;
   document.getElementById('tbl-l').innerHTML=th+tb;
 }
 
@@ -1159,7 +1167,8 @@ async function doXLSX(){
     spBg:'FFE6F3EC',sp:'FF1E5C38',sppBg:'FFFDEEDD',spp:'FF6B3200',
     coBg:'FFDAEAF8',co:'FF14446E',conBg:'FFFFF5D6',con:'FF7A5500',
     cfpBg:'FFFCE8E8',cfp:'FF7A1818',offBg:'FFEEEBE4',off:'FF6A6258',
-    lfpBg:'FFFCE8E8',lfp:'FF7A1818',lpBg:'FFEEEBE4',lp:'FF6A6258',
+    lfpBg:'FFFCE8E8',lfp:'FF7A1818',lpBg:'FFE2F4F3',lp:'FF0F6A67',
+    cmBg:'FFF6E3ED',cm:'FF8A2D5A',
     inactiveBg:'FFF4EFE6',inactive:'FF8B816F',
     weBg:'FFF5F0E6',
     secs:{
@@ -1183,7 +1192,7 @@ async function doXLSX(){
     if(c.type==='interval')return{bg:C.c1,fg:C.ink,bold:true};
     if(c.type==='code'){
       const code=normalizeCode(c.code);
-      const m2={SP:{bg:C.spBg,fg:C.sp},'SP+':{bg:C.sppBg,fg:C.spp},LFP:{bg:C.lfpBg,fg:C.lfp},LP:{bg:C.lpBg,fg:C.lp}};
+      const m2={SP:{bg:C.spBg,fg:C.sp},'SP+':{bg:C.sppBg,fg:C.spp},OFF:{bg:C.offBg,fg:C.off},LP:{bg:C.lpBg,fg:C.lp},LFP:{bg:C.lfpBg,fg:C.lfp},CM:{bg:C.cmBg,fg:C.cm}};
       if(c.code==='CO')return c.approved===false?{bg:C.conBg,fg:C.con,bold:false}:{bg:C.coBg,fg:C.co,bold:false};
       return m2[code]||{bg:C.paper,fg:C.ink,bold:false};
     }
@@ -1200,8 +1209,8 @@ async function doXLSX(){
   // ── Sheet 1: Program ──────────────────────────────────
   const ws1=wb.addWorksheet('Program '+MO[m]);
   ws1.properties.defaultRowHeight=22;
-  const colCount=days+6;
-  ws1.columns=[{width:22},{width:11},...Array(days).fill({width:7}),{width:9},{width:7},{width:6},{width:6}];
+  const colCount=days+7;
+  ws1.columns=[{width:22},{width:11},...Array(days).fill({width:7}),{width:9},{width:7},{width:6},{width:6},{width:6}];
 
   // Title
   const tR=ws1.addRow(['Program '+MO[m]+' '+y]);
@@ -1212,7 +1221,7 @@ async function doXLSX(){
   // Header
   const hArr=['Angajat','Sectie'];
   for(let d=1;d<=days;d++){const w=dow(y,m,d);hArr.push(`${DS[w]}${d}`);}
-  hArr.push('Ore','SP','CO','LFP');
+  hArr.push('Ore','SP','CO','CM','LFP');
   const hR=ws1.addRow(hArr);hR.height=28;
   hR.eachCell((cell,col)=>{
     cell.fill=fill(C.c2);cell.font=fnt(C.ink2,true,9);
@@ -1231,7 +1240,7 @@ async function doXLSX(){
     sR.getCell(1).fill=fill(sc.bg);sR.getCell(1).font=fnt(sc.c,true,9);sR.getCell(1).alignment=aln('left');
 
     emps.forEach(e=>{
-      let h=0,sp=0,spp=0,co=0,cfp=0;
+      let h=0,sp=0,spp=0,co=0,cm=0,lfp=0;
       const rowData=[e.name,SEC_LBL[sec]];
       for(let d=1;d<=days;d++){
         const dateStr=`${y}-${p2(m+1)}-${p2(d)}`;
@@ -1245,11 +1254,12 @@ async function doXLSX(){
           if(code==='SP')sp++;
           else if(code==='SP+')spp++;
           else if(code==='CO')co++;
-          else if(code==='LFP')cfp++;
+          else if(code==='CM')cm++;
+          else if(code==='LFP')lfp++;
         }
       }
       const spTot=sp+spp*1.5;
-      rowData.push(h||'',spTot||'',co||'',cfp||'');
+      rowData.push(h||'',spTot||'',co||'',cm||'',lfp||'');
       const dR=ws1.addRow(rowData);dR.height=22;
       // Name
       dR.getCell(1).fill=fill(C.paper);dR.getCell(1).font=fnt(C.ink,false,10);dR.getCell(1).alignment=aln('left');dR.getCell(1).border=bdrAll();
@@ -1265,8 +1275,8 @@ async function doXLSX(){
         cell.font=fnt(cs.fg,cs.bold,9);cell.alignment=aln('center');cell.border=bdrAll();
       }
       // Summary cells
-      const sumColors=[null,{bg:C.spBg,fg:C.sp},{bg:C.coBg,fg:C.co},{bg:C.lfpBg,fg:C.lfp}];
-      for(let i=0;i<4;i++){
+      const sumColors=[null,{bg:C.spBg,fg:C.sp},{bg:C.coBg,fg:C.co},{bg:C.cmBg,fg:C.cm},{bg:C.lfpBg,fg:C.lfp}];
+      for(let i=0;i<5;i++){
         const cell=dR.getCell(days+3+i);
         if(i===0){cell.fill=fill(C.c2);cell.font=fnt(C.ink,true,10);}
         else{const sc2=sumColors[i];cell.fill=fill(C.c2);cell.font=fnt(sc2.fg,false,10);}
@@ -1276,10 +1286,10 @@ async function doXLSX(){
   });
 
   // Total row
-  let tH=0,tSP=0,tSPP=0,tCO=0,tCFP=0;
-  S.emps.filter(e=>isEmpActiveInMonth(e,y,m)).forEach(e=>{for(let d=1;d<=days;d++){const dateStr=`${y}-${p2(m+1)}-${p2(d)}`;if(!isEmpActiveOnDate(e,dateStr))continue;const c=S.cells[ck(e.id,y,m,d)];if(!c)continue;if(c.type==='interval')tH+=ch(c.s,c.e);if(c.type==='code'){const code=normalizeCode(c.code);if(code==='SP')tSP++;if(code==='SP+')tSPP++;if(code==='CO')tCO++;if(code==='LFP')tCFP++;}}});
+  let tH=0,tSP=0,tSPP=0,tCO=0,tCM=0,tLFP=0;
+  S.emps.filter(e=>isEmpActiveInMonth(e,y,m)).forEach(e=>{for(let d=1;d<=days;d++){const dateStr=`${y}-${p2(m+1)}-${p2(d)}`;if(!isEmpActiveOnDate(e,dateStr))continue;const c=S.cells[ck(e.id,y,m,d)];if(!c)continue;if(c.type==='interval')tH+=ch(c.s,c.e);if(c.type==='code'){const code=normalizeCode(c.code);if(code==='SP')tSP++;if(code==='SP+')tSPP++;if(code==='CO')tCO++;if(code==='CM')tCM++;if(code==='LFP')tLFP++;}}});
   const tSpTot=tSP+tSPP*1.5;
-  const totR=ws1.addRow(['TOTAL','',...Array(days).fill(''),tH||'—',tSpTot||'—',tCO||'—',tCFP||'—']);
+  const totR=ws1.addRow(['TOTAL','',...Array(days).fill(''),tH||'—',tSpTot||'—',tCO||'—',tCM||'—',tLFP||'—']);
   totR.height=26;
   totR.eachCell((cell,col)=>{
     cell.fill=fill(C.c3);cell.font=fnt(C.ink,true,10);
@@ -1293,42 +1303,42 @@ async function doXLSX(){
   const data=mStats(y,m);
   const ws2=wb.addWorksheet('Pontaj '+MO[m]);
   ws2.properties.defaultRowHeight=22;
-  ws2.columns=[{width:24},{width:12},{width:13},{width:9},{width:8},{width:8}];
+  ws2.columns=[{width:24},{width:12},{width:13},{width:9},{width:8},{width:8},{width:8}];
 
   const t2R=ws2.addRow(['Pontaj '+MO[m]+' '+y]);
-  t2R.height=30;ws2.mergeCells(1,1,1,6);
+  t2R.height=30;ws2.mergeCells(1,1,1,7);
   const t2C=t2R.getCell(1);t2C.fill=fill(C.c2);t2C.font=fnt(C.ink,true,13);t2C.alignment=aln('left');
   ws2.addRow([]);
 
-  const h2R=ws2.addRow(['Angajat','Sectie','Total Ore','SP','CO','LFP']);
+  const h2R=ws2.addRow(['Angajat','Sectie','Total Ore','SP','CO','CM','LFP']);
   h2R.height=28;
   h2R.eachCell((cell,col)=>{
     cell.fill=fill(C.c2);cell.font=fnt(C.ink2,true,10);
     cell.alignment=col<=2?aln('left'):aln('center');cell.border=bdrAll();
   });
 
-  let s2H=0,s2SP=0,s2CO=0,s2CFP=0;
+  let s2H=0,s2SP=0,s2CO=0,s2CM=0,s2LFP=0;
   SEC_ORDER.forEach(sec=>{
     const emps=(g[sec]||[]).filter(e=>isEmpActiveInMonth(e,y,m));if(!emps.length)return;
     const sc=C.secs[sec];
     const sR2=ws2.addRow([SEC_LBL[sec]]);sR2.height=17;
-    ws2.mergeCells(sR2.number,1,sR2.number,6);
+    ws2.mergeCells(sR2.number,1,sR2.number,7);
     sR2.getCell(1).fill=fill(sc.bg);sR2.getCell(1).font=fnt(sc.c,true,9);sR2.getCell(1).alignment=aln('left');
     emps.forEach(e=>{
       const d=data[e.id]||{};
       const empSpTot=(d.sp||0)+(d.spp||0)*1.5;
-      s2H+=d.h||0;s2SP+=empSpTot;s2CO+=d.co||0;s2CFP+=d.lfp||0;
-      const dR2=ws2.addRow([e.name,SEC_LBL[sec],d.h||0,empSpTot||0,d.co||0,d.lfp||0]);
+      s2H+=d.h||0;s2SP+=empSpTot;s2CO+=d.co||0;s2CM+=d.cm||0;s2LFP+=d.lfp||0;
+      const dR2=ws2.addRow([e.name,SEC_LBL[sec],d.h||0,empSpTot||0,d.co||0,d.cm||0,d.lfp||0]);
       dR2.height=22;
       dR2.getCell(1).fill=fill(C.paper);dR2.getCell(1).font=fnt(C.ink,false,10);dR2.getCell(1).alignment=aln('left');dR2.getCell(1).border=bdrAll();
       dR2.getCell(2).fill=fill(sc.bg);dR2.getCell(2).font=fnt(sc.c,false,9);dR2.getCell(2).alignment=aln('center');dR2.getCell(2).border=bdrAll();
       dR2.getCell(3).fill=fill(C.c1);dR2.getCell(3).font=fnt(C.ink,true,12);dR2.getCell(3).alignment=aln('center');dR2.getCell(3).border=bdrAll();
-      [[4,C.spBg,C.sp],[5,C.coBg,C.co],[6,C.lfpBg,C.lfp]].forEach(([col,bg,fg])=>{
+      [[4,C.spBg,C.sp],[5,C.coBg,C.co],[6,C.cmBg,C.cm],[7,C.lfpBg,C.lfp]].forEach(([col,bg,fg])=>{
         dR2.getCell(col).fill=fill(bg);dR2.getCell(col).font=fnt(fg,false,10);dR2.getCell(col).alignment=aln('center');dR2.getCell(col).border=bdrAll();
       });
     });
   });
-  const tot2R=ws2.addRow(['TOTAL','',s2H,s2SP,s2CO,s2CFP]);
+  const tot2R=ws2.addRow(['TOTAL','',s2H,s2SP,s2CO,s2CM,s2LFP]);
   tot2R.height=26;
   tot2R.eachCell((cell,col)=>{
     cell.fill=fill(C.c3);cell.font=fnt(C.ink,true,11);
@@ -1357,7 +1367,7 @@ function buildWh(el,items,def){
 }
 function getWh(el){const i=Math.round(el.scrollTop/38);const it=el.querySelectorAll('.wh-item')[i];return it?parseInt(it.dataset.v):0;}
 function updComp(){document.getElementById('comp-h').textContent=ch(getWh(document.getElementById('wh-s')),getWh(document.getElementById('wh-e')));}
-function resetCodeBtns(){['SP','SPP','CO','LFP','LP'].forEach(id=>document.getElementById('cbtn-'+id)?.classList.remove('sel'));}
+function resetCodeBtns(){['SP','SPP','CO','CM','OFF','LP','LFP'].forEach(id=>document.getElementById('cbtn-'+id)?.classList.remove('sel'));}
 
 function openCellInfo(key,empName,y,m,d){
   const cell=S.cells[key];
@@ -1375,7 +1385,7 @@ function openCellInfo(key,empName,y,m,d){
     </div>`;
   } else if(cell.type==='code'){
     const code=normalizeCode(cell.code);
-    const CI={SP:{label:'Supliment',bg:'var(--sp-bg)',c:'var(--sp)'},'SP+':{label:'Supliment x1.5',bg:'var(--spp-bg)',c:'var(--spp)'},CO:{label:'Concediu',bg:'var(--co-bg)',c:'var(--co)'},LFP:{label:'Liber fara plata',bg:'var(--lfp-bg)',c:'var(--lfp)'},LP:{label:'Liber cu plata',bg:'var(--lp-bg)',c:'var(--lp)'}};
+    const CI={SP:{label:'Supliment',bg:'var(--sp-bg)',c:'var(--sp)'},'SP+':{label:'Supliment x1.5',bg:'var(--spp-bg)',c:'var(--spp)'},CO:{label:'Concediu',bg:'var(--co-bg)',c:'var(--co)'},CM:{label:'Concediu medical',bg:'var(--cm-bg)',c:'var(--cm)'},OFF:{label:'Liber',bg:'var(--off-bg)',c:'var(--off)'},LP:{label:'Liber cu plata',bg:'var(--lp-bg)',c:'var(--lp)'},LFP:{label:'Liber fara plata',bg:'var(--lfp-bg)',c:'var(--lfp)'}};
     const ci=CI[code]||{label:code,bg:'var(--c2)',c:'var(--ink)'};
     let extra='';
     if(cell.code==='CO'){if(cell.approved===true)extra=' · Aprobat';else if(cell.approved===false)extra=' · Neaprobat';}

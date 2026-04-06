@@ -146,6 +146,11 @@ table.mt th.tdth .dth-d{opacity:.75;}
 table.mt td.dtd.today{box-shadow:inset 0 0 0 1.5px var(--acc);}
 table.mt th.weth{color:var(--acc);}
 table.mt th.sth{background:var(--c3);border-left:2px solid var(--rule);min-width:38px;}
+table.mt th.sth.std-hrs{background:var(--c3);color:var(--ink);}
+table.mt th.sth.std-sp{background:var(--sp-bg);color:var(--sp);}
+table.mt th.sth.std-co{background:var(--co-bg);color:var(--co);}
+table.mt th.sth.std-cm{background:var(--cm-bg);color:var(--cm);}
+table.mt th.sth.std-lfp{background:var(--lfp-bg);color:var(--lfp);}
 table.mt tr.srow td{background:var(--c2);padding:5px 10px;font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:var(--ink2);border-bottom:1px solid var(--rule);}
 table.mt tr.srow td:first-child{position:sticky;left:0;z-index:2;background:var(--c2);}
 table.mt tr.drow{border-bottom:1px solid var(--rule);}
@@ -175,13 +180,18 @@ table.mt tr.my-row:hover td.ntd{background:#d8e8ff !important;}
 .cell-iv{font-size:8px;opacity:.65;margin-top:2px;font-family:var(--mono);}
 
 table.mt td.std{text-align:center;font-weight:600;padding:0 4px;font-size:11px;background:var(--c2);border-left:2px solid var(--rule);font-family:var(--mono);color:var(--ink);}
-table.mt td.std.sp{color:var(--sp);}
-table.mt td.std.spp{color:var(--spp);}
-table.mt td.std.co{color:var(--co);}
-table.mt td.std.cfp,table.mt td.std.lfp{color:var(--lfp);}
-table.mt td.std.cm{color:var(--cm);}
+table.mt td.std.sp{background:var(--sp-bg);color:var(--sp);}
+table.mt td.std.spp{background:var(--spp-bg);color:var(--spp);}
+table.mt td.std.co{background:var(--co-bg);color:var(--co);}
+table.mt td.std.cfp,table.mt td.std.lfp{background:var(--lfp-bg);color:var(--lfp);}
+table.mt td.std.cm{background:var(--cm-bg);color:var(--cm);}
 table.mt tr.trow td{background:var(--c3);border-top:2px solid var(--rule);font-weight:600;font-size:11px;text-align:center;padding:8px 4px;font-family:var(--mono);}
 table.mt tr.trow td:first-child{text-align:left;padding-left:10px;font-family:var(--font);font-size:10px;letter-spacing:.5px;text-transform:uppercase;color:var(--ink2);}
+table.mt tr.trow td.t-hrs{background:var(--c3);color:var(--ink);}
+table.mt tr.trow td.t-sp{background:var(--sp-bg);color:var(--sp);}
+table.mt tr.trow td.t-co{background:var(--co-bg);color:var(--co);}
+table.mt tr.trow td.t-cm{background:var(--cm-bg);color:var(--cm);}
+table.mt tr.trow td.t-lfp{background:var(--lfp-bg);color:var(--lfp);}
 table.mt td.dtd.locked{cursor:not-allowed;background:#f8f4ec;}
 table.mt td.dtd.locked .cell{opacity:.92;}
 
@@ -1062,7 +1072,7 @@ function renderLunar(){
     const isToday=y===today.getFullYear()&&m===today.getMonth()&&d===today.getDate();
     th+=`<th class="dth${w>=5?' weth':''}${isToday?' tdth':''}"><span class="dth-n">${d}</span><span class="dth-d">${DS[w]}</span></th>`;
   }
-  th+=`<th class="sth">Ore</th><th class="sth" style="color:var(--sp)">SP</th><th class="sth" style="color:var(--co)">CO</th><th class="sth" style="color:var(--cm)">CM</th><th class="sth" style="color:var(--lfp)">LFP</th></tr></thead>`;
+  th+=`<th class="sth std-hrs">Ore</th><th class="sth std-sp">SP</th><th class="sth std-co">CO</th><th class="sth std-cm">CM</th><th class="sth std-lfp">LFP</th></tr></thead>`;
   let tb='<tbody>';let tH=0,tSP=0,tSPP=0,tCO=0,tCM=0,tLFP=0;
   [1,2].forEach(tura=>{
     if(curTuraL && curTuraL!==tura)return;
@@ -1102,7 +1112,7 @@ function renderLunar(){
     });
   });
   const tSpTotal=tSP+tSPP*1.5;
-  tb+=`<tr class="trow"><td>Total</td>${Array(days).fill('<td></td>').join('')}<td>${tH}</td><td style="color:var(--sp)">${tSpTotal||'—'}</td><td style="color:var(--co)">${tCO||'—'}</td><td style="color:var(--cm)">${tCM||'—'}</td><td style="color:var(--lfp)">${tLFP||'—'}</td></tr></tbody>`;
+  tb+=`<tr class="trow"><td>Total</td>${Array(days).fill('<td></td>').join('')}<td class="t-hrs">${tH}</td><td class="t-sp">${tSpTotal||'—'}</td><td class="t-co">${tCO||'—'}</td><td class="t-cm">${tCM||'—'}</td><td class="t-lfp">${tLFP||'—'}</td></tr></tbody>`;
   document.getElementById('tbl-l').innerHTML=th+tb;
 }
 

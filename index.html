@@ -40,6 +40,9 @@ window.APP_CONFIG = {
   --con:    #7a5500; --con-bg: #fff5d6;
   --cfp:    #7a1818; --cfp-bg: #fce8e8;
   --off:    #6a6258; --off-bg: #eeebe4;
+  --lfp:    #7a1818; --lfp-bg: #fce8e8;
+  --lp:     #6a6258; --lp-bg:  #eeebe4;
+  --inactive:#8b816f; --inactive-bg:#f4efe6;
   --st: env(safe-area-inset-top,0px);
   --sb: env(safe-area-inset-bottom,0px);
   --font: 'IBM Plex Sans',sans-serif;
@@ -161,8 +164,9 @@ table.mt tr.my-row:hover td.ntd{background:#d8e8ff !important;}
 .cell.vspp{background:var(--spp-bg);color:var(--spp);}
 .cell.vco {background:var(--co-bg); color:var(--co);}
 .cell.vcon{background:var(--con-bg);color:var(--con);}
-.cell.vcfp{background:var(--cfp-bg);color:var(--cfp);}
-.cell.voff{background:var(--off-bg);color:var(--off);}
+.cell.vcfp,.cell.vlfp{background:var(--lfp-bg);color:var(--lfp);}
+.cell.voff,.cell.vlp{background:var(--lp-bg);color:var(--lp);}
+.cell.vinactive{background:var(--inactive-bg);color:var(--inactive);border:1px dashed var(--rule);}
 .cell.vhrs{background:var(--c1);color:var(--ink);}
 .cell-h{font-size:13px;font-weight:700;line-height:1;font-family:var(--mono);}
 .cell-iv{font-size:8px;opacity:.65;margin-top:2px;font-family:var(--mono);}
@@ -171,9 +175,11 @@ table.mt td.std{text-align:center;font-weight:600;padding:0 4px;font-size:11px;b
 table.mt td.std.sp{color:var(--sp);}
 table.mt td.std.spp{color:var(--spp);}
 table.mt td.std.co{color:var(--co);}
-table.mt td.std.cfp{color:var(--cfp);}
+table.mt td.std.cfp,table.mt td.std.lfp{color:var(--lfp);}
 table.mt tr.trow td{background:var(--c3);border-top:2px solid var(--rule);font-weight:600;font-size:11px;text-align:center;padding:8px 4px;font-family:var(--mono);}
 table.mt tr.trow td:first-child{text-align:left;padding-left:10px;font-family:var(--font);font-size:10px;letter-spacing:.5px;text-transform:uppercase;color:var(--ink2);}
+table.mt td.dtd.locked{cursor:not-allowed;background:#f8f4ec;}
+table.mt td.dtd.locked .cell{opacity:.92;}
 
 /* ── SECTION MANAGEMENT ── */
 .sec-mgmt{margin-bottom:18px;}
@@ -243,6 +249,7 @@ table.mt tr.trow td:first-child{text-align:left;padding-left:10px;font-family:va
 .cbtn{height:52px;border-radius:8px;border:2px solid transparent;font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;letter-spacing:.2px;-webkit-appearance:none;transition:border-color .12s,filter .1s;}
 .cbtn:active{filter:brightness(.9);}
 .cbtn.sel{border-color:currentColor;}
+#cbtn-CFP,#cbtn-OFF{display:none;}
 .co-appr{display:none;padding:0 18px 16px;animation:fadeIn .15s ease;}
 .co-appr.show{display:block;}
 .appr-lbl{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:var(--ink3);margin-bottom:10px;}
@@ -494,6 +501,12 @@ table.mt tr.trow td:first-child{text-align:left;padding-left:10px;font-family:va
         <button class="cbtn" id="cbtn-OFF" style="background:var(--off-bg);color:var(--off);grid-column:span 2" onclick="selCode('OFF')">OFF — Liber</button>
       </div>
     </div>
+    <div class="codes" style="padding-top:0">
+      <div class="cgrid">
+        <button class="cbtn" id="cbtn-LFP" style="background:var(--lfp-bg);color:var(--lfp)" onclick="selCode('LFP')">LFP - Liber fara plata</button>
+        <button class="cbtn" id="cbtn-LP"  style="background:var(--lp-bg);color:var(--lp);grid-column:span 2" onclick="selCode('LP')">LP - Liber cu plata</button>
+      </div>
+    </div>
     <div class="co-appr" id="co-appr">
       <div class="appr-lbl">Concediu aprobat?</div>
       <div class="appr-grid">
@@ -559,6 +572,10 @@ table.mt tr.trow td:first-child{text-align:left;padding-left:10px;font-family:va
         <button type="button" class="tura-opt on" id="tura-btn-1" onclick="setTura(1)">Tura 1</button>
         <button type="button" class="tura-opt" id="tura-btn-2" onclick="setTura(2)">Tura 2</button>
       </div>
+    </div>
+    <div class="field">
+      <label>Incepe din</label>
+      <input id="f-start-date" type="date">
     </div>
     <div class="field" id="f-status-field" style="display:none">
       <label>Status</label>
@@ -650,6 +667,44 @@ const dow = (y,m,d)=>(new Date(y,m,d).getDay()+6)%7;
 const ch  = (s,e)=>{if(e<=s)e+=24;return e-s;};
 const p2  = n=>String(n).padStart(2,'0');
 const uid = ()=>Date.now().toString(36)+Math.random().toString(36).slice(2,5);
+const isoDate = d=>`${d.getFullYear()}-${p2(d.getMonth()+1)}-${p2(d.getDate())}`;
+const normalizeCode = code=>({CFP:'LFP',OFF:'LP'})[code]||code;
+const codeBtnId = code=>`cbtn-${normalizeCode(code)==='SP+'?'SPP':normalizeCode(code)}`;
+
+function getEmpById(id){return S.emps.find(e=>e.id===id)||null;}
+function isEmpActiveOnDate(e,dateStr){
+  if(!e)return false;
+  if(e.startFrom&&dateStr<e.startFrom)return false;
+  if(e.inactiveFrom&&dateStr>=e.inactiveFrom)return false;
+  if(e.active===false&&!e.inactiveFrom)return false;
+  return true;
+}
+function isEmpActiveInRange(e,startStr,endStr){
+  if(!e)return false;
+  if(e.startFrom&&e.startFrom>endStr)return false;
+  if(e.inactiveFrom&&e.inactiveFrom<=startStr)return false;
+  if(e.active===false&&!e.inactiveFrom)return false;
+  return true;
+}
+function getCellLockReason(e,dateStr){
+  if(!e)return 'Angajat inexistent';
+  if(e.startFrom&&dateStr<e.startFrom)return `Angajatul incepe din ${e.startFrom}`;
+  if(e.inactiveFrom&&dateStr>=e.inactiveFrom)return `Angajatul este inactiv din ${e.inactiveFrom}`;
+  if(e.active===false)return 'Angajatul este inactiv';
+  return '';
+}
+function getInactiveCellDisp(){return{cls:'vinactive',h:'IN',iv:''};}
+function createStats(){return{h:0,sp:0,spp:0,co:0,lfp:0};}
+function addCellToStats(stats,cell){
+  if(!cell)return;
+  if(cell.type==='interval'){stats.h+=ch(cell.s,cell.e);return;}
+  if(cell.type!=='code')return;
+  const code=normalizeCode(cell.code);
+  if(code==='SP')stats.sp++;
+  else if(code==='SP+')stats.spp++;
+  else if(code==='CO')stats.co++;
+  else if(code==='LFP')stats.lfp++;
+}
 
 function setTuraL(t){
   curTuraL=t;
@@ -673,27 +728,26 @@ function grp(){
   return g;
 }
 function isEmpActiveInMonth(e,y,m){
-  if(e.active!==false)return true;
-  if(!e.inactiveFrom)return false;
-  const monthStr=`${y}-${String(m+1).padStart(2,'0')}`;
-  return e.inactiveFrom.slice(0,7)>=monthStr;
+  const monthStart=`${y}-${p2(m+1)}-01`;
+  const monthEnd=`${y}-${p2(m+1)}-${p2(dim(y,m))}`;
+  return isEmpActiveInRange(e,monthStart,monthEnd);
 }
 function isEmpActiveInWeek(e){
-  if(e.active!==false)return true;
-  if(!e.inactiveFrom)return false;
-  return new Date(e.inactiveFrom)>=sDate;
+  const days=getWeekDays();
+  return isEmpActiveInRange(e,isoDate(days[0]),isoDate(days[6]));
 }
 function ini(n){return n.split(' ').slice(0,2).map(w=>w[0]).join('');}
 
 function cellDisp(c){
   if(!c)return{cls:'empty',h:'',iv:''};
   if(c.type==='code'){
+    const code=normalizeCode(c.code);
     if(c.code==='CO'){
       if(c.approved===false)return{cls:'vcon',h:'CO',iv:'N'};
       return{cls:'vco',h:'CO',iv:c.approved===true?'A':''};
     }
-    const cls={SP:'vsp','SP+':'vspp',CFP:'vcfp',OFF:'voff'}[c.code]||'';
-    return{cls,h:c.code,iv:''};
+    const cls={SP:'vsp','SP+':'vspp',LFP:'vlfp',LP:'vlp'}[code]||'';
+    return{cls,h:code,iv:''};
   }
   if(c.type==='interval')return{cls:'vhrs',h:`${ch(c.s,c.e)}h`,iv:`${p2(c.s)}-${p2(c.e)}`};
   return{cls:'empty',h:'',iv:''};
@@ -702,13 +756,13 @@ function cellDisp(c){
 function mStats(y,m){
   const days=dim(y,m),res={};
   S.emps.forEach(e=>{
-    let h=0,sp=0,spp=0,co=0,cfp=0;
+    const stats=createStats();
     for(let d=1;d<=days;d++){
-      const c=S.cells[ck(e.id,y,m,d)];if(!c)continue;
-      if(c.type==='interval')h+=ch(c.s,c.e);
-      if(c.type==='code'){if(c.code==='SP')sp++;if(c.code==='SP+')spp++;if(c.code==='CO')co++;if(c.code==='CFP')cfp++;}
+      const dateStr=`${y}-${p2(m+1)}-${p2(d)}`;
+      if(!isEmpActiveOnDate(e,dateStr))continue;
+      addCellToStats(stats,S.cells[ck(e.id,y,m,d)]);
     }
-    res[e.id]={h,sp,spp,co,cfp};
+    res[e.id]=stats;
   });
   return res;
 }
@@ -751,13 +805,17 @@ async function loadData(){
     // Employees
     const angajati=data.angajati||{};
     S.emps=Object.entries(angajati)
-      .map(([id,e])=>({id,name:e.name,sec:e.section,tura:e.tura||1,active:e.active!==false,inactiveFrom:e.inactiveFrom||null}))
+      .map(([id,e])=>({id,name:e.name,sec:e.section,tura:e.tura||1,active:e.active!==false,startFrom:e.startFrom||null,inactiveFrom:e.inactiveFrom||null}))
       .sort((a,b)=>SEC_ORDER.indexOf(a.sec)-SEC_ORDER.indexOf(b.sec)||a.name.localeCompare(b.name));
     // Cells
     const pontaj=data.pontaj||{};
     S.cells={};
     Object.entries(pontaj).forEach(([eid,dates])=>{
-      Object.entries(dates||{}).forEach(([date,cell])=>{S.cells[`${eid}-${date}`]=cell;});
+      Object.entries(dates||{}).forEach(([date,cell])=>{
+        const row={...cell};
+        if(row.type==='code')row.code=normalizeCode(row.code);
+        S.cells[`${eid}-${date}`]=row;
+      });
     });
     S.empPass=(data.setari?.emp_pass)||'';
     return true;
@@ -769,7 +827,7 @@ async function saveCell(key,cellData){
   const{eid,date}=parseKey(key);
   const row={type:cellData.type};
   if(cellData.type==='interval'){row.s=cellData.s;row.e=cellData.e;}
-  if(cellData.type==='code'){row.code=cellData.code;if(cellData.approved!=null)row.approved=cellData.approved;}
+  if(cellData.type==='code'){row.code=normalizeCode(cellData.code);if(cellData.approved!=null)row.approved=cellData.approved;}
   try{await db.ref(`pontaj/${eid}/${date}`).set(row);}catch(e){toast('Eroare la salvare');}
 }
 
@@ -850,6 +908,7 @@ function showApp(){
 function renderEmps(){
   const g=grp();
   const stats=mStats(new Date().getFullYear(),new Date().getMonth());
+  const todayStr=isoDate(new Date());
   let html='';
 
   // Emp pass + section management (admin only)
@@ -896,7 +955,7 @@ function renderEmps(){
 
   let any=false;
   SEC_ORDER.forEach(sec=>{
-    const all=(g[sec]||[]).filter(e=>e.active!==false);
+    const all=(g[sec]||[]).filter(e=>e.active!==false||(e.inactiveFrom&&e.inactiveFrom>todayStr));
     const emps=curTuraA?all.filter(e=>e.tura===curTuraA):all;
     if(!emps.length)return;
     any=true;const st=SEC_ST[sec];
@@ -908,19 +967,22 @@ function renderEmps(){
       </div>
       <div class="emp-sec-wrap">`;
     emps.forEach(e=>{
-      const s=stats[e.id]||{h:0,sp:0,spp:0,co:0,cfp:0};
+      const s=stats[e.id]||createStats();
       const parts=[];
       if(s.h)parts.push(`<span class="emsv"><b>${s.h}</b>ore</span>`);
       const empSP=s.sp+s.spp*1.5;
       if(empSP)parts.push(`<span class="emsv" style="color:var(--sp)"><b>${empSP}</b>SP</span>`);
       if(s.co)parts.push(`<span class="emsv" style="color:var(--co)"><b>${s.co}</b>CO</span>`);
-      if(s.cfp)parts.push(`<span class="emsv" style="color:var(--cfp)"><b>${s.cfp}</b>CFP</span>`);
+      if(s.lfp)parts.push(`<span class="emsv" style="color:var(--lfp)"><b>${s.lfp}</b>LFP</span>`);
       const statsHtml=parts.length?`<div class="emp-mini-stats">${parts.join('')}</div>`:'';
+      const info=[SEC_LBL[sec]];
+      if(e.startFrom&&e.startFrom>todayStr)info.push(`incepe din ${e.startFrom}`);
+      if(e.active===false&&e.inactiveFrom&&e.inactiveFrom>todayStr)info.push(`inactiv din ${e.inactiveFrom}`);
       html+=`<div class="emp-card" id="card-${e.id}">
         <div class="emp-mono" style="color:${st.c};background:${st.bg}">${ini(e.name)}</div>
         <div class="emp-info">
           <div class="emp-name">${e.name}</div>
-          <div class="emp-sec-lbl">${SEC_LBL[sec]}</div>
+          <div class="emp-sec-lbl">${info.join(' · ')}</div>
           ${statsHtml}
         </div>
         ${isAdmin()?delBlock(e.id):''}
@@ -931,7 +993,7 @@ function renderEmps(){
   if(!any)html+=`<div style="text-align:center;padding:48px 20px;color:var(--ink3)"><div style="font-size:28px;margin-bottom:14px;opacity:.4">&#128100;</div><div style="font-size:13px;line-height:1.7">Niciun angajat activ.<br>Apasa + Angajat.</div></div>`;
 
   // Inactive section
-  const inactive=S.emps.filter(e=>e.active===false);
+  const inactive=S.emps.filter(e=>e.active===false&&(!e.inactiveFrom||e.inactiveFrom<=todayStr));
   if(inactive.length){
     html+=`<div>
       <div class="sec-hdr" style="margin-top:16px">
@@ -942,12 +1004,15 @@ function renderEmps(){
       <div class="emp-sec-wrap">`;
     inactive.forEach(e=>{
       const st=SEC_ST[e.sec]||{c:'var(--ink3)',bg:'var(--c1)'};
+      const meta=[SEC_LBL[e.sec]||e.sec];
+      if(e.startFrom)meta.push(`inceput ${e.startFrom}`);
+      if(e.inactiveFrom)meta.push(`inactiv din ${e.inactiveFrom}`);
       const dateStr=e.inactiveFrom?` · din ${e.inactiveFrom}`:'';
       html+=`<div class="emp-card" id="card-${e.id}" style="opacity:.5">
         <div class="emp-mono" style="color:${st.c};background:${st.bg}">${ini(e.name)}</div>
         <div class="emp-info">
           <div class="emp-name">${e.name}</div>
-          <div class="emp-sec-lbl">${SEC_LBL[e.sec]||e.sec}${dateStr}</div>
+          <div class="emp-sec-lbl">${meta.join(' · ')}</div>
         </div>
         ${isAdmin()?delBlock(e.id):''}
       </div>`;
@@ -979,8 +1044,9 @@ function renderLunar(){
     <span class="lpill" style="background:var(--spp-bg);color:var(--spp)">SP+</span>
     <span class="lpill" style="background:var(--co-bg);color:var(--co)">CO &#10003;</span>
     <span class="lpill" style="background:var(--con-bg);color:var(--con)">CO N</span>
-    <span class="lpill" style="background:var(--cfp-bg);color:var(--cfp)">CFP</span>
-    <span class="lpill" style="background:var(--off-bg);color:var(--off)">OFF</span>
+    <span class="lpill" style="background:var(--lfp-bg);color:var(--lfp)">LFP</span>
+    <span class="lpill" style="background:var(--lp-bg);color:var(--lp)">LP</span>
+    <span class="lpill" style="background:var(--inactive-bg);color:var(--inactive)">IN</span>
     <span class="lpill" style="background:var(--c2);color:var(--ink2)">ore auto</span>`;
   const today=new Date();
   let th=`<thead><tr><th class="nth">Angajat</th>`;
@@ -989,7 +1055,7 @@ function renderLunar(){
     const isToday=y===today.getFullYear()&&m===today.getMonth()&&d===today.getDate();
     th+=`<th class="dth${w>=5?' weth':''}${isToday?' tdth':''}"><span class="dth-n">${d}</span><span class="dth-d">${DS[w]}</span></th>`;
   }
-  th+=`<th class="sth">Ore</th><th class="sth" style="color:var(--sp)">SP</th><th class="sth" style="color:var(--co)">CO</th><th class="sth" style="color:var(--cfp)">CFP</th></tr></thead>`;
+  th+=`<th class="sth">Ore</th><th class="sth" style="color:var(--sp)">SP</th><th class="sth" style="color:var(--co)">CO</th><th class="sth" style="color:var(--lfp)">LFP</th></tr></thead>`;
   let tb='<tbody>';let tH=0,tSP=0,tSPP=0,tCO=0,tCFP=0;
   [1,2].forEach(tura=>{
     if(curTuraL && curTuraL!==tura)return;
@@ -1002,11 +1068,24 @@ function renderLunar(){
       tb+=`<tr class="drow${isMe?' my-row':''}"><td class="ntd">${e.name}</td>`;
       for(let d=1;d<=days;d++){
         const w=dow(y,m,d);const isToday2=y===today.getFullYear()&&m===today.getMonth()&&d===today.getDate();
-        const key=ck(e.id,y,m,d);const cell=S.cells[key];const dis=cellDisp(cell);
-        if(cell){if(cell.type==='interval')h+=ch(cell.s,cell.e);if(cell.type==='code'){if(cell.code==='SP')sp++;if(cell.code==='SP+')spp++;if(cell.code==='CO')co++;if(cell.code==='CFP')cfp++;}}
+        const dateStr=`${y}-${p2(m+1)}-${p2(d)}`;
+        const key=ck(e.id,y,m,d);
+        const dayActive=isEmpActiveOnDate(e,dateStr);
+        const cell=dayActive?S.cells[key]:null;
+        const dis=dayActive?cellDisp(cell):getInactiveCellDisp();
+        if(dayActive&&cell){
+          if(cell.type==='interval')h+=ch(cell.s,cell.e);
+          if(cell.type==='code'){
+            const code=normalizeCode(cell.code);
+            if(code==='SP')sp++;
+            else if(code==='SP+')spp++;
+            else if(code==='CO')co++;
+            else if(code==='LFP')cfp++;
+          }
+        }
         const en=e.name.replace(/'/g,"\\'");
-        const click=isAdmin()?`onclick="openPk('${key}','${e.id}',${y},${m},${d},'${en}')"`:`onclick="openCellInfo('${key}','${en}',${y},${m},${d})"`;
-        tb+=`<td class="dtd${w>=5?' we':''}${isToday2?' today':''} clickable" ${click}>
+        const click=dayActive?(isAdmin()?`onclick="openPk('${key}','${e.id}',${y},${m},${d},'${en}')"`:`onclick="openCellInfo('${key}','${en}',${y},${m},${d})"`):'';
+        tb+=`<td class="dtd${w>=5?' we':''}${isToday2?' today':''}${dayActive?' clickable':' locked'}" ${click}>
           <div class="cell ${dis.cls}"><div class="cell-h">${dis.h||'·'}</div>${dis.iv?`<div class="cell-iv">${dis.iv}</div>`:''}</div></td>`;
       }
       const spTotal=sp+spp*1.5;
@@ -1047,11 +1126,15 @@ function renderSaptamanal(){
       tb+=`<tr class="drow${isMe?' my-row':''}"><td class="ntd">${e.name}</td>`;
       days.forEach(date=>{
         const y=date.getFullYear(),m=date.getMonth(),d=date.getDate();
-        const w=(date.getDay()+6)%7;const key=ck(e.id,y,m,d);const cell=S.cells[key];const dis=cellDisp(cell);
-        if(cell&&cell.type==='interval')h+=ch(cell.s,cell.e);
+        const dateStr=isoDate(date);
+        const w=(date.getDay()+6)%7;const key=ck(e.id,y,m,d);
+        const dayActive=isEmpActiveOnDate(e,dateStr);
+        const cell=dayActive?S.cells[key]:null;
+        const dis=dayActive?cellDisp(cell):getInactiveCellDisp();
+        if(dayActive&&cell&&cell.type==='interval')h+=ch(cell.s,cell.e);
         const en=e.name.replace(/'/g,"\\'");
-        const click=isAdmin()?`onclick="openPk('${key}','${e.id}',${y},${m},${d},'${en}')"`:`onclick="openCellInfo('${key}','${en}',${y},${m},${d})"`;
-        tb+=`<td class="dtd${w>=5?' we':''} clickable" ${click}>
+        const click=dayActive?(isAdmin()?`onclick="openPk('${key}','${e.id}',${y},${m},${d},'${en}')"`:`onclick="openCellInfo('${key}','${en}',${y},${m},${d})"`):'';
+        tb+=`<td class="dtd${w>=5?' we':''}${dayActive?' clickable':' locked'}" ${click}>
           <div class="cell ${dis.cls}"><div class="cell-h">${dis.h||'·'}</div>${dis.iv?`<div class="cell-iv">${dis.iv}</div>`:''}</div></td>`;
       });
       tb+=`<td class="std">${h||'—'}</td></tr>`;
@@ -1076,6 +1159,8 @@ async function doXLSX(){
     spBg:'FFE6F3EC',sp:'FF1E5C38',sppBg:'FFFDEEDD',spp:'FF6B3200',
     coBg:'FFDAEAF8',co:'FF14446E',conBg:'FFFFF5D6',con:'FF7A5500',
     cfpBg:'FFFCE8E8',cfp:'FF7A1818',offBg:'FFEEEBE4',off:'FF6A6258',
+    lfpBg:'FFFCE8E8',lfp:'FF7A1818',lpBg:'FFEEEBE4',lp:'FF6A6258',
+    inactiveBg:'FFF4EFE6',inactive:'FF8B816F',
     weBg:'FFF5F0E6',
     secs:{
       CALD:      {bg:'FFFEF3E2',c:'FF7A4800'},
@@ -1092,20 +1177,23 @@ async function doXLSX(){
   const bdrAll=(s='thin')=>({top:bdr(s),bottom:bdr(s),left:bdr(s),right:bdr(s)});
   const aln=(h,v='middle',wrap=false)=>({horizontal:h,vertical:v,wrapText:wrap});
 
-  function cellStyle(c){
+  function cellStyle(c,isInactive=false){
+    if(isInactive)return{bg:C.inactiveBg,fg:C.inactive,bold:false};
     if(!c)return{bg:C.paper,fg:C.ink4,bold:false};
     if(c.type==='interval')return{bg:C.c1,fg:C.ink,bold:true};
     if(c.type==='code'){
-      const m2={SP:{bg:C.spBg,fg:C.sp},'SP+':{bg:C.sppBg,fg:C.spp},CFP:{bg:C.cfpBg,fg:C.cfp},OFF:{bg:C.offBg,fg:C.off}};
+      const code=normalizeCode(c.code);
+      const m2={SP:{bg:C.spBg,fg:C.sp},'SP+':{bg:C.sppBg,fg:C.spp},LFP:{bg:C.lfpBg,fg:C.lfp},LP:{bg:C.lpBg,fg:C.lp}};
       if(c.code==='CO')return c.approved===false?{bg:C.conBg,fg:C.con,bold:false}:{bg:C.coBg,fg:C.co,bold:false};
-      return m2[c.code]||{bg:C.paper,fg:C.ink,bold:false};
+      return m2[code]||{bg:C.paper,fg:C.ink,bold:false};
     }
     return{bg:C.paper,fg:C.ink,bold:false};
   }
-  function cellVal(c){
+  function cellVal(c,isInactive=false){
+    if(isInactive)return'IN';
     if(!c)return'';
     if(c.type==='interval')return`${p2(c.s)}-${p2(c.e)} (${ch(c.s,c.e)}h)`;
-    if(c.type==='code'){if(c.code==='CO')return c.approved===false?'CO (N)':c.approved===true?'CO (A)':'CO';return c.code;}
+    if(c.type==='code'){if(c.code==='CO')return c.approved===false?'CO (N)':c.approved===true?'CO (A)':'CO';return normalizeCode(c.code);}
     return'';
   }
 
@@ -1124,7 +1212,7 @@ async function doXLSX(){
   // Header
   const hArr=['Angajat','Sectie'];
   for(let d=1;d<=days;d++){const w=dow(y,m,d);hArr.push(`${DS[w]}${d}`);}
-  hArr.push('Ore','SP','CO','CFP');
+  hArr.push('Ore','SP','CO','LFP');
   const hR=ws1.addRow(hArr);hR.height=28;
   hR.eachCell((cell,col)=>{
     cell.fill=fill(C.c2);cell.font=fnt(C.ink2,true,9);
@@ -1146,11 +1234,19 @@ async function doXLSX(){
       let h=0,sp=0,spp=0,co=0,cfp=0;
       const rowData=[e.name,SEC_LBL[sec]];
       for(let d=1;d<=days;d++){
-        const c=S.cells[ck(e.id,y,m,d)];
-        if(!c){rowData.push('');continue;}
-        rowData.push(cellVal(c));
+        const dateStr=`${y}-${p2(m+1)}-${p2(d)}`;
+        const dayActive=isEmpActiveOnDate(e,dateStr);
+        const c=dayActive?S.cells[ck(e.id,y,m,d)]:null;
+        rowData.push(cellVal(c,!dayActive));
+        if(!dayActive||!c)continue;
         if(c.type==='interval')h+=ch(c.s,c.e);
-        else{if(c.code==='SP')sp++;if(c.code==='SP+')spp++;if(c.code==='CO')co++;if(c.code==='CFP')cfp++;}
+        else{
+          const code=normalizeCode(c.code);
+          if(code==='SP')sp++;
+          else if(code==='SP+')spp++;
+          else if(code==='CO')co++;
+          else if(code==='LFP')cfp++;
+        }
       }
       const spTot=sp+spp*1.5;
       rowData.push(h||'',spTot||'',co||'',cfp||'');
@@ -1161,13 +1257,15 @@ async function doXLSX(){
       dR.getCell(2).fill=fill(sc.bg);dR.getCell(2).font=fnt(sc.c,false,9);dR.getCell(2).alignment=aln('center');dR.getCell(2).border=bdrAll();
       // Day cells
       for(let d=1;d<=days;d++){
-        const cell=dR.getCell(d+2);const c=S.cells[ck(e.id,y,m,d)];
-        const cs=cellStyle(c);const isWe=dow(y,m,d)>=5;
-        cell.fill=fill(c?cs.bg:isWe?C.weBg:C.paper);
+        const dateStr=`${y}-${p2(m+1)}-${p2(d)}`;
+        const dayActive=isEmpActiveOnDate(e,dateStr);
+        const cell=dR.getCell(d+2);const c=dayActive?S.cells[ck(e.id,y,m,d)]:null;
+        const cs=cellStyle(c,!dayActive);const isWe=dow(y,m,d)>=5;
+        cell.fill=fill(!dayActive?cs.bg:(c?cs.bg:isWe?C.weBg:C.paper));
         cell.font=fnt(cs.fg,cs.bold,9);cell.alignment=aln('center');cell.border=bdrAll();
       }
       // Summary cells
-      const sumColors=[null,{bg:C.spBg,fg:C.sp},{bg:C.coBg,fg:C.co},{bg:C.cfpBg,fg:C.cfp}];
+      const sumColors=[null,{bg:C.spBg,fg:C.sp},{bg:C.coBg,fg:C.co},{bg:C.lfpBg,fg:C.lfp}];
       for(let i=0;i<4;i++){
         const cell=dR.getCell(days+3+i);
         if(i===0){cell.fill=fill(C.c2);cell.font=fnt(C.ink,true,10);}
@@ -1179,7 +1277,7 @@ async function doXLSX(){
 
   // Total row
   let tH=0,tSP=0,tSPP=0,tCO=0,tCFP=0;
-  S.emps.filter(e=>isEmpActiveInMonth(e,y,m)).forEach(e=>{for(let d=1;d<=days;d++){const c=S.cells[ck(e.id,y,m,d)];if(!c)continue;if(c.type==='interval')tH+=ch(c.s,c.e);if(c.type==='code'){if(c.code==='SP')tSP++;if(c.code==='SP+')tSPP++;if(c.code==='CO')tCO++;if(c.code==='CFP')tCFP++;}}});
+  S.emps.filter(e=>isEmpActiveInMonth(e,y,m)).forEach(e=>{for(let d=1;d<=days;d++){const dateStr=`${y}-${p2(m+1)}-${p2(d)}`;if(!isEmpActiveOnDate(e,dateStr))continue;const c=S.cells[ck(e.id,y,m,d)];if(!c)continue;if(c.type==='interval')tH+=ch(c.s,c.e);if(c.type==='code'){const code=normalizeCode(c.code);if(code==='SP')tSP++;if(code==='SP+')tSPP++;if(code==='CO')tCO++;if(code==='LFP')tCFP++;}}});
   const tSpTot=tSP+tSPP*1.5;
   const totR=ws1.addRow(['TOTAL','',...Array(days).fill(''),tH||'—',tSpTot||'—',tCO||'—',tCFP||'—']);
   totR.height=26;
@@ -1202,7 +1300,7 @@ async function doXLSX(){
   const t2C=t2R.getCell(1);t2C.fill=fill(C.c2);t2C.font=fnt(C.ink,true,13);t2C.alignment=aln('left');
   ws2.addRow([]);
 
-  const h2R=ws2.addRow(['Angajat','Sectie','Total Ore','SP','CO','CFP']);
+  const h2R=ws2.addRow(['Angajat','Sectie','Total Ore','SP','CO','LFP']);
   h2R.height=28;
   h2R.eachCell((cell,col)=>{
     cell.fill=fill(C.c2);cell.font=fnt(C.ink2,true,10);
@@ -1219,13 +1317,13 @@ async function doXLSX(){
     emps.forEach(e=>{
       const d=data[e.id]||{};
       const empSpTot=(d.sp||0)+(d.spp||0)*1.5;
-      s2H+=d.h||0;s2SP+=empSpTot;s2CO+=d.co||0;s2CFP+=d.cfp||0;
-      const dR2=ws2.addRow([e.name,SEC_LBL[sec],d.h||0,empSpTot||0,d.co||0,d.cfp||0]);
+      s2H+=d.h||0;s2SP+=empSpTot;s2CO+=d.co||0;s2CFP+=d.lfp||0;
+      const dR2=ws2.addRow([e.name,SEC_LBL[sec],d.h||0,empSpTot||0,d.co||0,d.lfp||0]);
       dR2.height=22;
       dR2.getCell(1).fill=fill(C.paper);dR2.getCell(1).font=fnt(C.ink,false,10);dR2.getCell(1).alignment=aln('left');dR2.getCell(1).border=bdrAll();
       dR2.getCell(2).fill=fill(sc.bg);dR2.getCell(2).font=fnt(sc.c,false,9);dR2.getCell(2).alignment=aln('center');dR2.getCell(2).border=bdrAll();
       dR2.getCell(3).fill=fill(C.c1);dR2.getCell(3).font=fnt(C.ink,true,12);dR2.getCell(3).alignment=aln('center');dR2.getCell(3).border=bdrAll();
-      [[4,C.spBg,C.sp],[5,C.coBg,C.co],[6,C.cfpBg,C.cfp]].forEach(([col,bg,fg])=>{
+      [[4,C.spBg,C.sp],[5,C.coBg,C.co],[6,C.lfpBg,C.lfp]].forEach(([col,bg,fg])=>{
         dR2.getCell(col).fill=fill(bg);dR2.getCell(col).font=fnt(fg,false,10);dR2.getCell(col).alignment=aln('center');dR2.getCell(col).border=bdrAll();
       });
     });
@@ -1259,7 +1357,7 @@ function buildWh(el,items,def){
 }
 function getWh(el){const i=Math.round(el.scrollTop/38);const it=el.querySelectorAll('.wh-item')[i];return it?parseInt(it.dataset.v):0;}
 function updComp(){document.getElementById('comp-h').textContent=ch(getWh(document.getElementById('wh-s')),getWh(document.getElementById('wh-e')));}
-function resetCodeBtns(){['SP','SPP','CO','CFP','OFF'].forEach(id=>document.getElementById('cbtn-'+id)?.classList.remove('sel'));}
+function resetCodeBtns(){['SP','SPP','CO','LFP','LP'].forEach(id=>document.getElementById('cbtn-'+id)?.classList.remove('sel'));}
 
 function openCellInfo(key,empName,y,m,d){
   const cell=S.cells[key];
@@ -1276,12 +1374,13 @@ function openCellInfo(key,empName,y,m,d){
       <div style="font-size:13px;color:var(--ink3);margin-top:8px">${h} ore lucrate</div>
     </div>`;
   } else if(cell.type==='code'){
-    const CI={SP:{label:'Supliment',bg:'var(--sp-bg)',c:'var(--sp)'},'SP+':{label:'Supliment x1.5',bg:'var(--spp-bg)',c:'var(--spp)'},CO:{label:'Concediu',bg:'var(--co-bg)',c:'var(--co)'},CFP:{label:'Fara plata',bg:'var(--cfp-bg)',c:'var(--cfp)'},OFF:{label:'Zi libera',bg:'var(--off-bg)',c:'var(--off)'}};
-    const ci=CI[cell.code]||{label:cell.code,bg:'var(--c2)',c:'var(--ink)'};
+    const code=normalizeCode(cell.code);
+    const CI={SP:{label:'Supliment',bg:'var(--sp-bg)',c:'var(--sp)'},'SP+':{label:'Supliment x1.5',bg:'var(--spp-bg)',c:'var(--spp)'},CO:{label:'Concediu',bg:'var(--co-bg)',c:'var(--co)'},LFP:{label:'Liber fara plata',bg:'var(--lfp-bg)',c:'var(--lfp)'},LP:{label:'Liber cu plata',bg:'var(--lp-bg)',c:'var(--lp)'}};
+    const ci=CI[code]||{label:code,bg:'var(--c2)',c:'var(--ink)'};
     let extra='';
     if(cell.code==='CO'){if(cell.approved===true)extra=' · Aprobat';else if(cell.approved===false)extra=' · Neaprobat';}
     body=`<div style="text-align:center">
-      <div style="display:inline-block;background:${ci.bg};color:${ci.c};padding:12px 28px;border-radius:10px;font-size:22px;font-weight:700;letter-spacing:.5px">${cell.code}${extra}</div>
+      <div style="display:inline-block;background:${ci.bg};color:${ci.c};padding:12px 28px;border-radius:10px;font-size:22px;font-weight:700;letter-spacing:.5px">${code}${extra}</div>
       <div style="font-size:13px;color:var(--ink3);margin-top:12px">${ci.label}</div>
     </div>`;
   }
@@ -1291,6 +1390,9 @@ function openCellInfo(key,empName,y,m,d){
 function closeCellInfo(){document.getElementById('cell-info-ovl').classList.remove('open');}
 
 function openPk(key,eid,y,m,d,name){
+  const emp=getEmpById(eid);
+  const dateStr=`${y}-${p2(m+1)}-${p2(d)}`;
+  if(!isEmpActiveOnDate(emp,dateStr)){toast(getCellLockReason(emp,dateStr));return;}
   pkKey=key;pkSelCode=null;pkCoAppr=null;
   const c=S.cells[key];
   document.getElementById('pk-emp').textContent=name;
@@ -1305,11 +1407,11 @@ function openPk(key,eid,y,m,d,name){
   if(c){
     if(c.type==='interval'){sh=c.s;eh=c.e;}
     else if(c.type==='code'){
-      pkSelCode=c.code;
-      document.getElementById('cbtn-'+(c.code==='SP+'?'SPP':c.code))?.classList.add('sel');
+      pkSelCode=normalizeCode(c.code);
+      document.getElementById(codeBtnId(c.code))?.classList.add('sel');
       document.getElementById('wh-sec').classList.add('dim');
       document.getElementById('computed').classList.add('dim');
-      if(c.code==='CO'){
+      if(pkSelCode==='CO'){
         pkCoAppr=c.approved??null;
         document.getElementById('co-appr').classList.add('show');
         document.getElementById('appr-yes').classList.toggle('sel',c.approved===true);
@@ -1326,15 +1428,15 @@ function openPk(key,eid,y,m,d,name){
 function selCode(code){
   if(pkSelCode===code){
     pkSelCode=null;pkCoAppr=null;
-    document.getElementById('cbtn-'+(code==='SP+'?'SPP':code))?.classList.remove('sel');
+    document.getElementById(codeBtnId(code))?.classList.remove('sel');
     document.getElementById('co-appr').classList.remove('show');
     document.getElementById('wh-sec').classList.remove('dim');
     document.getElementById('computed').classList.remove('dim');
     return;
   }
-  if(pkSelCode)document.getElementById('cbtn-'+(pkSelCode==='SP+'?'SPP':pkSelCode))?.classList.remove('sel');
+  if(pkSelCode)document.getElementById(codeBtnId(pkSelCode))?.classList.remove('sel');
   pkSelCode=code;pkCoAppr=null;
-  document.getElementById('cbtn-'+(code==='SP+'?'SPP':code))?.classList.add('sel');
+  document.getElementById(codeBtnId(code))?.classList.add('sel');
   document.getElementById('wh-sec').classList.add('dim');
   document.getElementById('computed').classList.add('dim');
   if(code==='CO'){document.getElementById('co-appr').classList.add('show');document.getElementById('appr-yes').classList.remove('sel');document.getElementById('appr-no').classList.remove('sel');}
@@ -1346,6 +1448,9 @@ function closePk(){document.getElementById('pkovl').classList.remove('open');}
 
 async function applyPk(){
   if(!pkKey)return;
+  const info=parseKey(pkKey);
+  const emp=getEmpById(info.eid);
+  if(!isEmpActiveOnDate(emp,info.date)){closePk();toast(getCellLockReason(emp,info.date));return;}
   let cell;
   if(pkSelCode){
     if(pkSelCode==='CO'&&pkCoAppr===null){toast('Selecteaza daca e aprobat sau nu');return;}
@@ -1361,6 +1466,9 @@ async function applyPk(){
 
 async function clearCell(){
   if(!pkKey)return;
+  const info=parseKey(pkKey);
+  const emp=getEmpById(info.eid);
+  if(!isEmpActiveOnDate(emp,info.date)){closePk();toast(getCellLockReason(emp,info.date));return;}
   delete S.cells[pkKey];
   closePk();
   if(curTab==='lunar')renderLunar();else if(curTab==='saptamanal')renderSaptamanal();
@@ -1463,6 +1571,9 @@ function openAdd(){
   document.getElementById('f-name').value='';
   fillSecSelect(SEC_ORDER[0]);
   setTura(1);
+  setEmpStatus('activ');
+  document.getElementById('f-start-date').value=isoDate(new Date());
+  document.getElementById('f-inactiv-date').value='';
   document.getElementById('f-status-field').style.display='none';
   document.getElementById('f-inactiv-date-field').style.display='none';
   document.getElementById('emp-modal').classList.add('open');
@@ -1475,6 +1586,7 @@ function openEdit(id){
   document.getElementById('f-name').value=e.name;
   fillSecSelect(e.sec);
   setTura(e.tura||1);
+  document.getElementById('f-start-date').value=e.startFrom||'';
   document.getElementById('f-status-field').style.display='';
   setEmpStatus(e.active===false?'inactiv':'activ');
   document.getElementById('f-inactiv-date').value=e.inactiveFrom||'';
@@ -1484,19 +1596,23 @@ function closeModal(){document.getElementById('emp-modal').classList.remove('ope
 async function saveEmp(){
   const name=document.getElementById('f-name').value.trim().toUpperCase();
   const sec=document.getElementById('f-sec').value;
+  const startFrom=document.getElementById('f-start-date').value||null;
   if(!name){toast('Introdu un nume');return;}
+  if(!startFrom){toast('Alege data de inceput');return;}
+  const inactiveFrom=editStatus==='inactiv'?(document.getElementById('f-inactiv-date').value||null):null;
+  if(editStatus==='inactiv'&&!inactiveFrom){toast('Alege data de inactivare');return;}
+  if(startFrom&&inactiveFrom&&inactiveFrom<=startFrom){toast('Data de inactivare trebuie sa fie dupa data de inceput');return;}
   closeModal();
   if(editId){
     const active=editStatus!=='inactiv';
-    const inactiveFrom=editStatus==='inactiv'?(document.getElementById('f-inactiv-date').value||null):null;
-    const e=S.emps.find(x=>x.id===editId);if(e){e.name=name;e.sec=sec;e.tura=editTura;e.active=active;e.inactiveFrom=inactiveFrom;}
-    toast('Actualizat');renderEmps();
-    await db.ref(`angajati/${editId}`).update({name,section:sec,tura:editTura,active,inactiveFrom:inactiveFrom||null});
+    const e=S.emps.find(x=>x.id===editId);if(e){e.name=name;e.sec=sec;e.tura=editTura;e.active=active;e.startFrom=startFrom;e.inactiveFrom=inactiveFrom;}
+    toast('Actualizat');renderEmps();renderLunar();renderSaptamanal();
+    await db.ref(`angajati/${editId}`).update({name,section:sec,tura:editTura,active,startFrom:startFrom||null,inactiveFrom:inactiveFrom||null});
   } else {
     const id=uid();
-    S.emps.push({id,name,sec,tura:editTura,active:true,inactiveFrom:null});
-    toast('Adaugat');renderEmps();
-    await db.ref(`angajati/${id}`).set({name,section:sec,tura:editTura,active:true});
+    S.emps.push({id,name,sec,tura:editTura,active:true,startFrom,inactiveFrom:null});
+    toast('Adaugat');renderEmps();renderLunar();renderSaptamanal();
+    await db.ref(`angajati/${id}`).set({name,section:sec,tura:editTura,active:true,startFrom});
   }
 }
 let empPassVisible=false;

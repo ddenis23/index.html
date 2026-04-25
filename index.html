@@ -196,6 +196,11 @@ table.mt tr.trow td.t-cm{background:var(--cm-bg);color:var(--cm);}
 table.mt tr.trow td.t-lfp{background:var(--lfp-bg);color:var(--lfp);}
 table.mt td.dtd.locked{cursor:not-allowed;background:#f8f4ec;}
 table.mt td.dtd.locked .cell{opacity:.92;}
+table.mt th.sth.std-vara{background:var(--spp-bg);color:var(--spp);border-left:2px solid var(--rule);}
+table.mt td.vara-cell{text-align:center;font-weight:600;padding:0 4px;font-size:11px;border-left:2px solid var(--rule);font-family:var(--mono);min-width:38px;width:38px;}
+table.mt td.vara-cell.vara-admin{cursor:pointer;}
+table.mt td.vara-cell.vara-admin:hover{filter:brightness(.93);}
+.vara-add-hint{color:var(--ink4);font-size:16px;line-height:1;}
 
 /* ── SECTION MANAGEMENT ── */
 .sec-mgmt{margin-bottom:18px;}
@@ -450,6 +455,7 @@ table.mt td.dtd.locked .cell{opacity:.92;}
         <button class="tura-btn" id="tfl-1" onclick="setTuraL(1)">T1</button>
         <button class="tura-btn" id="tfl-2" onclick="setTuraL(2)">T2</button>
       </div>
+      <button class="mnav-act" id="vara-btn" onclick="openVaraBulk()" style="display:none;background:var(--spp-bg);color:var(--spp);border:1px solid var(--spp)">&#9728; Vara</button>
       <button class="mnav-act" id="xlsx-btn" onclick="doXLSX()">Descarca XLSX</button>
     </div>
     <div class="leg" id="leg"></div>
@@ -534,6 +540,15 @@ table.mt td.dtd.locked .cell{opacity:.92;}
       <button class="btn-clear" onclick="clearCell()">Sterge</button>
       <button class="btn-apply" onclick="applyPk()">Aplica</button>
     </div>
+  </div>
+</div>
+
+<!-- VARA MODAL -->
+<div class="ovl" id="vara-ovl">
+  <div class="msheet">
+    <div class="mhandle"></div>
+    <div class="mtitle" id="vara-title">Bonus Vară</div>
+    <div id="vara-body"></div>
   </div>
 </div>
 
@@ -662,7 +677,7 @@ const DF  = ['Luni','Marti','Miercuri','Joi','Vineri','Sambata','Duminica'];
 const SH = [6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22];
 const EH = [8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,0,1,2];
 // ── STATE ────────────────────────────────────────────────
-let S = { emps: [], cells: {}, secs: [], empPass:'' };
+let S = { emps: [], cells: {}, secs: [], empPass:'', bonusAll:{} };
 let curTuraL=0, curTuraS=0, curTuraA=0, editTura=1, editStatus='activ';
 
 
@@ -778,8 +793,10 @@ function cellDisp(c){
   return{cls:'empty',h:'',iv:''};
 }
 
+const varaSpVal=code=>code?({'SP':1,'SP0.5':0.5,'SP+':1.5}[code]||0):0;
 function mStats(y,m){
   const days=dim(y,m),res={};
+  const mBon=S.bonusAll[`${y}-${p2(m+1)}`]||{};
   S.emps.forEach(e=>{
     const stats=createStats();
     for(let d=1;d<=days;d++){
@@ -787,6 +804,10 @@ function mStats(y,m){
       if(!isEmpActiveOnDate(e,dateStr))continue;
       addCellToStats(stats,S.cells[ck(e.id,y,m,d)]);
     }
+    const vc=mBon[e.id];
+    if(vc==='SP')stats.sp++;
+    else if(vc==='SP0.5')stats.sp05++;
+    else if(vc==='SP+')stats.spp++;
     res[e.id]=stats;
   });
   return res;
@@ -843,6 +864,7 @@ async function loadData(){
       });
     });
     S.empPass=(data.setari?.emp_pass)||'';
+    S.bonusAll=data.bonusuri||{};
     return true;
   }catch(e){toast('Eroare la conectare Firebase');return false;}
 }
@@ -1089,13 +1111,14 @@ function renderLunar(){
     const isToday=y===today.getFullYear()&&m===today.getMonth()&&d===today.getDate();
     th+=`<th class="dth${w>=5?' weth':''}${isToday?' tdth':''}"><span class="dth-n">${d}</span><span class="dth-d">${DS[w]}</span></th>`;
   }
-  th+=`<th class="sth std-hrs">Ore</th><th class="sth std-sp">SP</th><th class="sth std-co">CO</th><th class="sth std-cm">CM</th><th class="sth std-lfp">LFP</th></tr></thead>`;
-  let tb='<tbody>';let tH=0,tSP=0,tSP05=0,tSPP=0,tCO=0,tCM=0,tLFP=0;
+  th+=`<th class="sth std-vara">Vara</th><th class="sth std-hrs">Ore</th><th class="sth std-sp">SP</th><th class="sth std-co">CO</th><th class="sth std-cm">CM</th><th class="sth std-lfp">LFP</th></tr></thead>`;
+  const mBonL=S.bonusAll[`${y}-${p2(m+1)}`]||{};
+  let tb='<tbody>';let tH=0,tSP=0,tSP05=0,tSPP=0,tCO=0,tCM=0,tLFP=0,tVaraSp=0;
   [1,2].forEach(tura=>{
     if(curTuraL && curTuraL!==tura)return;
     const emps=S.emps.filter(e=>e.tura===tura&&isEmpActiveInMonth(e,y,m));
     if(!emps.length)return;
-    tb+=`<tr class="srow"><td colspan="${days+6}">Tura ${tura}</td></tr>`;
+    tb+=`<tr class="srow"><td colspan="${days+7}">Tura ${tura}</td></tr>`;
     emps.forEach(e=>{
       let h=0,sp=0,sp05=0,spp=0,co=0,cm=0,lfp=0;
       const isMe=isEmp()&&currentUser.id===e.id;
@@ -1124,13 +1147,22 @@ function renderLunar(){
         tb+=`<td class="dtd${w>=5?' we':''}${isToday2?' today':''}${dayActive?' clickable':' locked'}" ${click}>
           <div class="cell ${dis.cls}"><div class="cell-h">${dis.h||'·'}</div>${dis.iv?`<div class="cell-iv">${dis.iv}</div>`:''}</div></td>`;
       }
-      const spTotal=sp+sp05*0.5+spp*1.5;
-      tH+=h;tSP+=sp;tSP05+=sp05;tSPP+=spp;tCO+=co;tCM+=cm;tLFP+=lfp;
+      const vc=mBonL[e.id]||null;
+      const vsv=varaSpVal(vc);
+      const varaBg=vc?({'SP':'var(--sp-bg)','SP0.5':'var(--sp05-bg)','SP+':'var(--spp-bg)'}[vc]||''):'';
+      const varaC=vc?({'SP':'var(--sp)','SP0.5':'var(--sp05)','SP+':'var(--spp)'}[vc]||''):'';
+      const varaLbl=vc?({'SP':'SP','SP0.5':'SP½','SP+':'SP+'}[vc]||vc):'';
+      const varaClick=isAdmin()?`onclick="${vc?`removeVaraEmp('${e.id}')`:''}"` :'';
+      const varaAdminCls=isAdmin()?(vc?'vara-admin':''):''
+      const varaCellInner=vc?`<span style="background:${varaBg};color:${varaC};padding:2px 5px;border-radius:4px">${varaLbl}</span>`:(isAdmin()?`<span class="vara-add-hint">+</span>`:'');
+      tb+=`<td class="vara-cell ${varaAdminCls}" ${isAdmin()&&!vc?`onclick="openVaraEmp('${e.id}')"`:varaClick} style="${vc?'cursor:pointer':''}">${varaCellInner}</td>`;
+      const spTotal=sp+sp05*0.5+spp*1.5+vsv;
+      tH+=h;tSP+=sp;tSP05+=sp05;tSPP+=spp;tCO+=co;tCM+=cm;tLFP+=lfp;tVaraSp+=vsv;
       tb+=`<td class="std">${h||'—'}</td><td class="std sp">${spTotal||'—'}</td><td class="std co">${co||'—'}</td><td class="std cm">${cm||'—'}</td><td class="std lfp">${lfp||'—'}</td></tr>`;
     });
   });
-  const tSpTotal=tSP+tSP05*0.5+tSPP*1.5;
-  tb+=`<tr class="trow"><td>Total</td>${Array(days).fill('<td></td>').join('')}<td class="t-hrs">${tH}</td><td class="t-sp">${tSpTotal||'—'}</td><td class="t-co">${tCO||'—'}</td><td class="t-cm">${tCM||'—'}</td><td class="t-lfp">${tLFP||'—'}</td></tr></tbody>`;
+  const tSpTotal=tSP+tSP05*0.5+tSPP*1.5+tVaraSp;
+  tb+=`<tr class="trow"><td>Total</td>${Array(days).fill('<td></td>').join('')}<td></td><td class="t-hrs">${tH}</td><td class="t-sp">${tSpTotal||'—'}</td><td class="t-co">${tCO||'—'}</td><td class="t-cm">${tCM||'—'}</td><td class="t-lfp">${tLFP||'—'}</td></tr></tbody>`;
   document.getElementById('tbl-l').innerHTML=th+tb;
 }
 
@@ -1243,8 +1275,8 @@ async function doXLSX(){
   // ── Sheet 1: Program ──────────────────────────────────
   const ws1=wb.addWorksheet('Program '+MO[m]);
   ws1.properties.defaultRowHeight=22;
-  const colCount=days+7;
-  ws1.columns=[{width:22},{width:11},...Array(days).fill({width:7}),{width:9},{width:7},{width:6},{width:6},{width:6}];
+  const colCount=days+8;
+  ws1.columns=[{width:22},{width:11},...Array(days).fill({width:7}),{width:7},{width:9},{width:7},{width:6},{width:6},{width:6}];
 
   // Title
   const tR=ws1.addRow(['Program '+MO[m]+' '+y]);
@@ -1255,12 +1287,15 @@ async function doXLSX(){
   // Header
   const hArr=['Angajat','Sectie'];
   for(let d=1;d<=days;d++){const w=dow(y,m,d);hArr.push(`${DS[w]}${d}`);}
-  hArr.push('Ore','SP','CO','CM','LFP');
+  hArr.push('Vara','Ore','SP','CO','CM','LFP');
+  const mBonX=S.bonusAll[`${y}-${p2(m+1)}`]||{};
   const hR=ws1.addRow(hArr);hR.height=28;
   hR.eachCell((cell,col)=>{
     cell.fill=fill(C.c2);cell.font=fnt(C.ink2,true,9);
     cell.alignment=col<=2?aln('left'):aln('center');cell.border=bdrAll();
   });
+  // Vara column header styling
+  {const varaHc=hR.getCell(days+3);varaHc.fill=fill(C.sppBg);varaHc.font=fnt(C.spp,true,9);}
   // Weekend column shading in header
   for(let d=1;d<=days;d++){if(dow(y,m,d)>=5){const hc=hR.getCell(d+2);hc.font=fnt('FF6B4F1A',true,9);}}
 
@@ -1293,8 +1328,11 @@ async function doXLSX(){
           else if(code==='LFP')lfp++;
         }
       }
-      const spTot=sp+sp05*0.5+spp*1.5;
-      rowData.push(h||'',spTot||'',co||'',cm||'',lfp||'');
+      const xvc=mBonX[e.id]||null;
+      const xvsv=varaSpVal(xvc);
+      const xvLbl=xvc?({'SP':'SP','SP0.5':'SP½','SP+':'SP+'}[xvc]||xvc):'';
+      const spTot=sp+sp05*0.5+spp*1.5+xvsv;
+      rowData.push(xvLbl,h||'',spTot||'',co||'',cm||'',lfp||'');
       const dR=ws1.addRow(rowData);dR.height=22;
       // Name
       dR.getCell(1).fill=fill(C.paper);dR.getCell(1).font=fnt(C.ink,false,10);dR.getCell(1).alignment=aln('left');dR.getCell(1).border=bdrAll();
@@ -1309,10 +1347,13 @@ async function doXLSX(){
         cell.fill=fill(!dayActive?cs.bg:(c?cs.bg:isWe?C.weBg:C.paper));
         cell.font=fnt(cs.fg,cs.bold,9);cell.alignment=aln('center');cell.border=bdrAll();
       }
-      // Summary cells
+      // Vara cell
+      {const vc2=dR.getCell(days+3);const vcs=xvc?{SP:{bg:C.spBg,fg:C.sp},'SP0.5':{bg:C.sp05Bg,fg:C.sp05},'SP+':{bg:C.sppBg,fg:C.spp}}[xvc]:{bg:C.paper,fg:C.ink4};
+      vc2.fill=fill(vcs.bg);vc2.font=fnt(vcs.fg,!!xvc,10);vc2.alignment=aln('center');vc2.border=bdrAll();vc2.value=xvLbl||'';}
+      // Summary cells (now shifted by 1 due to Vara column)
       const sumColors=[null,{bg:C.spBg,fg:C.sp},{bg:C.coBg,fg:C.co},{bg:C.cmBg,fg:C.cm},{bg:C.lfpBg,fg:C.lfp}];
       for(let i=0;i<5;i++){
-        const cell=dR.getCell(days+3+i);
+        const cell=dR.getCell(days+4+i);
         if(i===0){cell.fill=fill(C.c2);cell.font=fnt(C.ink,true,10);}
         else{const sc2=sumColors[i];cell.fill=fill(C.c2);cell.font=fnt(sc2.fg,false,10);}
         cell.alignment=aln('center');cell.border=bdrAll();
@@ -1321,10 +1362,10 @@ async function doXLSX(){
   });
 
   // Total row
-  let tH=0,tSP=0,tSP05=0,tSPP=0,tCO=0,tCM=0,tLFP=0;
-  S.emps.filter(e=>isEmpActiveInMonth(e,y,m)).forEach(e=>{for(let d=1;d<=days;d++){const dateStr=`${y}-${p2(m+1)}-${p2(d)}`;if(!isEmpActiveOnDate(e,dateStr))continue;const c=S.cells[ck(e.id,y,m,d)];if(!c)continue;if(c.type==='interval')tH+=ch(c.s,c.e);if(c.type==='code'){const code=normalizeCode(c.code);if(code==='SP')tSP++;if(code==='SP0.5')tSP05++;if(code==='SP+')tSPP++;if(code==='CO')tCO++;if(code==='CM')tCM++;if(code==='LFP')tLFP++;}}});
-  const tSpTot=tSP+tSP05*0.5+tSPP*1.5;
-  const totR=ws1.addRow(['TOTAL','',...Array(days).fill(''),tH||'—',tSpTot||'—',tCO||'—',tCM||'—',tLFP||'—']);
+  let tH=0,tSP=0,tSP05=0,tSPP=0,tCO=0,tCM=0,tLFP=0,tVaraSp=0;
+  S.emps.filter(e=>isEmpActiveInMonth(e,y,m)).forEach(e=>{tVaraSp+=varaSpVal(mBonX[e.id]||null);for(let d=1;d<=days;d++){const dateStr=`${y}-${p2(m+1)}-${p2(d)}`;if(!isEmpActiveOnDate(e,dateStr))continue;const c=S.cells[ck(e.id,y,m,d)];if(!c)continue;if(c.type==='interval')tH+=ch(c.s,c.e);if(c.type==='code'){const code=normalizeCode(c.code);if(code==='SP')tSP++;if(code==='SP0.5')tSP05++;if(code==='SP+')tSPP++;if(code==='CO')tCO++;if(code==='CM')tCM++;if(code==='LFP')tLFP++;}}});
+  const tSpTot=tSP+tSP05*0.5+tSPP*1.5+tVaraSp;
+  const totR=ws1.addRow(['TOTAL','',...Array(days).fill(''),'',tH||'—',tSpTot||'—',tCO||'—',tCM||'—',tLFP||'—']);
   totR.height=26;
   totR.eachCell((cell,col)=>{
     cell.fill=fill(C.c3);cell.font=fnt(C.ink,true,10);
@@ -1532,8 +1573,81 @@ function goTab(t){
   const btn=document.getElementById('hbtn');
   if(t==='angajati'){btn.style.display=isAdmin()?'':'none';renderEmps();}
   else btn.style.display='none';
+  document.getElementById('vara-btn').style.display=(t==='lunar'&&isAdmin())?'':'none';
   if(t==='lunar')renderLunar();
   else if(t==='saptamanal')renderSaptamanal();
+}
+
+// ── BONUS VARA ───────────────────────────────────────────
+let varaEmpId=null;
+const varaCodeBtns=()=>`
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px">
+    <button class="cbtn" style="background:var(--sp-bg);color:var(--sp);height:48px" onclick="applyVara('SP')">SP<br><small>1 tura</small></button>
+    <button class="cbtn" style="background:var(--sp05-bg);color:var(--sp05);height:48px" onclick="applyVara('SP0.5')">SP½<br><small>½ tura</small></button>
+    <button class="cbtn" style="background:var(--spp-bg);color:var(--spp);height:48px" onclick="applyVara('SP+')">SP+<br><small>1.5 ture</small></button>
+  </div>`;
+
+function openVaraBulk(){
+  varaEmpId=null;
+  const mk=`${lY}-${p2(lM+1)}`;
+  const hasBon=Object.keys(S.bonusAll[mk]||{}).length>0;
+  document.getElementById('vara-title').textContent=`Bonus Vara — ${MO[lM]} ${lY}`;
+  document.getElementById('vara-body').innerHTML=`
+    <p style="font-size:12px;color:var(--ink3);margin-bottom:14px">Aplica bonus la toti angajatii activi din luna curenta:</p>
+    ${varaCodeBtns()}
+    ${hasBon?`<div style="border-top:1px solid var(--rule);padding-top:12px;margin-top:4px"><button class="btn-cancel" style="width:100%" onclick="clearVaraAll()">Sterge bonus vara de la toti</button></div>`:''}
+    <div style="margin-top:10px"><button class="btn-cancel" style="width:100%" onclick="closeVara()">Inchide</button></div>`;
+  document.getElementById('vara-ovl').classList.add('open');
+}
+
+function openVaraEmp(eid){
+  varaEmpId=eid;
+  const emp=getEmpById(eid);if(!emp)return;
+  const mk=`${lY}-${p2(lM+1)}`;
+  const vc=(S.bonusAll[mk]||{})[eid]||null;
+  const vcLbl=vc?({'SP':'SP — 1 tura','SP0.5':'SP½ — jumatate tura','SP+':'SP+ — 1.5 ture'}[vc]||vc):null;
+  document.getElementById('vara-title').textContent=emp.name;
+  document.getElementById('vara-body').innerHTML=`
+    <p style="font-size:12px;color:var(--ink3);margin-bottom:10px">${vc?`Bonus curent: <b>${vcLbl}</b>`:'Niciun bonus vara setat.'}</p>
+    <p style="font-size:11px;color:var(--ink3);margin-bottom:10px">Schimba:</p>
+    ${varaCodeBtns()}
+    ${vc?`<div style="border-top:1px solid var(--rule);padding-top:12px;margin-top:4px"><button class="btn-cancel" style="width:100%" onclick="removeVaraEmp('${eid}')">Scoate bonus vara</button></div>`:''}
+    <div style="margin-top:10px"><button class="btn-cancel" style="width:100%" onclick="closeVara()">Inchide</button></div>`;
+  document.getElementById('vara-ovl').classList.add('open');
+}
+
+function closeVara(){document.getElementById('vara-ovl').classList.remove('open');}
+
+async function applyVara(code){
+  const mk=`${lY}-${p2(lM+1)}`;
+  if(!S.bonusAll[mk])S.bonusAll[mk]={};
+  if(varaEmpId){
+    S.bonusAll[mk][varaEmpId]=code;
+    await db.ref(`bonusuri/${mk}/${varaEmpId}`).set(code);
+    toast('Bonus adaugat');
+  } else {
+    const batch={};
+    S.emps.filter(e=>isEmpActiveInMonth(e,lY,lM)).forEach(e=>{S.bonusAll[mk][e.id]=code;batch[e.id]=code;});
+    await db.ref(`bonusuri/${mk}`).update(batch);
+    toast(`Bonus ${code==='SP0.5'?'SP½':code} aplicat la ${Object.keys(batch).length} angajati`);
+  }
+  closeVara();renderLunar();
+}
+
+async function removeVaraEmp(eid){
+  const mk=`${lY}-${p2(lM+1)}`;
+  if(S.bonusAll[mk])delete S.bonusAll[mk][eid];
+  closeVara();renderLunar();
+  await db.ref(`bonusuri/${mk}/${eid}`).remove();
+  toast('Bonus scos');
+}
+
+async function clearVaraAll(){
+  const mk=`${lY}-${p2(lM+1)}`;
+  S.bonusAll[mk]={};
+  closeVara();renderLunar();
+  await db.ref(`bonusuri/${mk}`).remove();
+  toast('Bonus vara sters de la toti');
 }
 
 // ── SECTION MODAL ────────────────────────────────────────

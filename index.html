@@ -10,17 +10,7 @@
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-database-compat.js"></script>
-<script>
-window.APP_CONFIG = {
-  apiKey:            "AIzaSyBpiJx3yYefQ6rV-xRDC-nZFMX1kjpCSZ4",
-  authDomain:        "pontajunda.firebaseapp.com",
-  databaseURL:       "https://pontajunda-default-rtdb.europe-west1.firebasedatabase.app",
-  projectId:         "pontajunda",
-  storageBucket:     "pontajunda.firebasestorage.app",
-  messagingSenderId: "142331431276",
-  appId:             "1:142331431276:web:4a4094f6493a180d6f8b49"
-};
-</script>
+<script src="config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
 <style>
 :root {
@@ -35,6 +25,7 @@ window.APP_CONFIG = {
   --ink4:   #c8bcaa;
   --acc:    #6b4f1a;
   --sp:     #1e5c38; --sp-bg:  #e6f3ec;
+  --sp05:   #0d6e5a; --sp05-bg:#d4f0eb;
   --spp:    #6b3200; --spp-bg: #fdeedd;
   --co:     #14446e; --co-bg:  #daeaf8;
   --con:    #7a5500; --con-bg: #fff5d6;
@@ -166,8 +157,9 @@ table.mt tr.my-row:hover td.ntd{background:#d8e8ff !important;}
 
 .cell{height:40px;border-radius:5px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:10px;font-weight:600;padding:2px;}
 .cell.empty{color:var(--ink4);}
-.cell.vsp {background:var(--sp-bg); color:var(--sp);}
-.cell.vspp{background:var(--spp-bg);color:var(--spp);}
+.cell.vsp  {background:var(--sp-bg);  color:var(--sp);}
+.cell.vsp05{background:var(--sp05-bg);color:var(--sp05);}
+.cell.vspp {background:var(--spp-bg); color:var(--spp);}
 .cell.vco {background:var(--co-bg); color:var(--co);}
 .cell.vcon{background:var(--con-bg);color:var(--con);}
 .cell.vcfp,.cell.vlfp{background:var(--lfp-bg);color:var(--lfp);}
@@ -507,10 +499,11 @@ table.mt td.dtd.locked .cell{opacity:.92;}
     <div class="codes">
       <div class="codes-lbl">Sau alege cod</div>
       <div class="cgrid">
-        <button class="cbtn" id="cbtn-SP"  style="background:var(--sp-bg);color:var(--sp)"   onclick="selCode('SP')">SP — Supliment</button>
-        <button class="cbtn" id="cbtn-SPP" style="background:var(--spp-bg);color:var(--spp)" onclick="selCode('SP+')">SP+ — x1.5</button>
-        <button class="cbtn" id="cbtn-CO"  style="background:var(--co-bg);color:var(--co)"   onclick="selCode('CO')">CO — Concediu</button>
-        <button class="cbtn" id="cbtn-CM"  style="background:var(--cm-bg);color:var(--cm)"   onclick="selCode('CM')">CM — Medical</button>
+        <button class="cbtn" id="cbtn-SP"   style="background:var(--sp-bg);color:var(--sp)"     onclick="selCode('SP')">SP — 1 tura</button>
+        <button class="cbtn" id="cbtn-SP05" style="background:var(--sp05-bg);color:var(--sp05)" onclick="selCode('SP0.5')">SP½ — ½ tura</button>
+        <button class="cbtn" id="cbtn-SPP"  style="background:var(--spp-bg);color:var(--spp);grid-column:span 2" onclick="selCode('SP+')">SP+ — 1.5 ture</button>
+        <button class="cbtn" id="cbtn-CO"   style="background:var(--co-bg);color:var(--co)"     onclick="selCode('CO')">CO — Concediu</button>
+        <button class="cbtn" id="cbtn-CM"   style="background:var(--cm-bg);color:var(--cm)"     onclick="selCode('CM')">CM — Medical</button>
       </div>
     </div>
     <div class="codes" style="padding-top:0">
@@ -622,6 +615,12 @@ try{
   }
 }catch(e){console.error('Firebase init error:',e);}
 
+// ── PASSWORD HASHING ─────────────────────────────────────
+async function sha256(str){
+  const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
 // ── CONFIG ──────────────────────────────────────────────
 const DEFAULT_SECS = [
   {id:'CALD',      label:'Cald',      bg:'#fef3e2',c:'#7a4800'},
@@ -682,7 +681,7 @@ const p2  = n=>String(n).padStart(2,'0');
 const uid = ()=>Date.now().toString(36)+Math.random().toString(36).slice(2,5);
 const isoDate = d=>`${d.getFullYear()}-${p2(d.getMonth()+1)}-${p2(d.getDate())}`;
 const normalizeCode = code=>({CFP:'LFP'})[code]||code;
-const codeBtnId = code=>`cbtn-${normalizeCode(code)==='SP+'?'SPP':normalizeCode(code)}`;
+const codeBtnId = code=>{const nc=normalizeCode(code);if(nc==='SP+')return'cbtn-SPP';if(nc==='SP0.5')return'cbtn-SP05';return'cbtn-'+nc;};
 
 function getEmpById(id){return S.emps.find(e=>e.id===id)||null;}
 function isEmpActiveOnDate(e,dateStr){
@@ -707,13 +706,14 @@ function getCellLockReason(e,dateStr){
   return '';
 }
 function getInactiveCellDisp(){return{cls:'vinactive',h:'IN',iv:''};}
-function createStats(){return{h:0,sp:0,spp:0,co:0,cm:0,lfp:0};}
+function createStats(){return{h:0,sp:0,sp05:0,spp:0,co:0,cm:0,lfp:0};}
 function addCellToStats(stats,cell){
   if(!cell)return;
   if(cell.type==='interval'){stats.h+=ch(cell.s,cell.e);return;}
   if(cell.type!=='code')return;
   const code=normalizeCode(cell.code);
   if(code==='SP')stats.sp++;
+  else if(code==='SP0.5')stats.sp05++;
   else if(code==='SP+')stats.spp++;
   else if(code==='CO')stats.co++;
   else if(code==='CM')stats.cm++;
@@ -760,8 +760,9 @@ function cellDisp(c){
       if(c.approved===false)return{cls:'vcon',h:'CO',iv:'N'};
       return{cls:'vco',h:'CO',iv:c.approved===true?'A':''};
     }
-    const cls={SP:'vsp','SP+':'vspp',OFF:'voff',LP:'vlp',LFP:'vlfp',CM:'vcm'}[code]||'';
-    return{cls,h:code,iv:''};
+    const cls={SP:'vsp','SP0.5':'vsp05','SP+':'vspp',OFF:'voff',LP:'vlp',LFP:'vlfp',CM:'vcm'}[code]||'';
+    const lbl={SP:'SP','SP0.5':'SP½','SP+':'SP+'}[code]||code;
+    return{cls,h:lbl,iv:''};
   }
   if(c.type==='interval')return{cls:'vhrs',h:`${ch(c.s,c.e)}h`,iv:`${p2(c.s)}-${p2(c.e)}`};
   return{cls:'empty',h:'',iv:''};
@@ -872,12 +873,14 @@ async function loginEmp(){
   const pass=document.getElementById('l-emp-pass').value;
   const errEl=document.getElementById('login-err');errEl.textContent='';
   if(!pass){errEl.textContent='Introdu parola.';return;}
+  if(!db){errEl.textContent='Eroare: Firebase neconfigurat.';return;}
   const btn=document.querySelector('#lf-angajat .btn-login');
   btn.disabled=true;btn.textContent='Se verifica...';
   const snap=await db.ref('setari/emp_pass').once('value');
   btn.disabled=false;btn.textContent='Intra';
   if(!snap.val()){errEl.textContent='Parola angajati nu a fost setata. Contacteaza administratorul.';return;}
-  if(snap.val()!==pass){errEl.textContent='Parola incorecta.';return;}
+  const hash=await sha256(pass);
+  if(snap.val()!==hash){errEl.textContent='Parola incorecta.';return;}
   currentUser={role:'employee'};
   localStorage.setItem('ptUser',JSON.stringify(currentUser));
   showApp();
@@ -887,11 +890,14 @@ async function loginAdmin(){
   const pass=document.getElementById('l-admin-pass').value;
   const errEl=document.getElementById('login-err');errEl.textContent='';
   if(!pass){errEl.textContent='Introdu parola.';return;}
+  if(!db){errEl.textContent='Eroare: Firebase neconfigurat.';return;}
   const btn=document.querySelector('#lf-admin .btn-login');
   btn.disabled=true;btn.textContent='Se verifica...';
   const snap=await db.ref('setari/admin_pass').once('value');
   btn.disabled=false;btn.textContent='Intra';
-  if(!snap.val()||snap.val()!==pass){errEl.textContent='Parola incorecta.';return;}
+  if(!snap.val()){errEl.textContent='Parola incorecta.';return;}
+  const hash=await sha256(pass);
+  if(snap.val()!==hash){errEl.textContent='Parola incorecta.';return;}
   currentUser={role:'admin'};
   localStorage.setItem('ptUser',JSON.stringify(currentUser));
   showApp();
@@ -984,7 +990,7 @@ function renderEmps(){
       const s=stats[e.id]||createStats();
       const parts=[];
       if(s.h)parts.push(`<span class="emsv"><b>${s.h}</b>ore</span>`);
-      const empSP=s.sp+s.spp*1.5;
+      const empSP=s.sp+s.spp*1.5+(s.sp05||0)*0.5;
       if(empSP)parts.push(`<span class="emsv" style="color:var(--sp)"><b>${empSP}</b>SP</span>`);
       if(s.co)parts.push(`<span class="emsv" style="color:var(--co)"><b>${s.co}</b>CO</span>`);
       if(s.cm)parts.push(`<span class="emsv" style="color:var(--cm)"><b>${s.cm}</b>CM</span>`);
@@ -1056,6 +1062,7 @@ function renderLunar(){
   document.getElementById('lbl-l').textContent=`${MO[m]} ${y}`;
   document.getElementById('leg').innerHTML=`
     <span class="lpill" style="background:var(--sp-bg);color:var(--sp)">SP</span>
+    <span class="lpill" style="background:var(--sp05-bg);color:var(--sp05)">SP½</span>
     <span class="lpill" style="background:var(--spp-bg);color:var(--spp)">SP+</span>
     <span class="lpill" style="background:var(--co-bg);color:var(--co)">CO &#10003;</span>
     <span class="lpill" style="background:var(--con-bg);color:var(--con)">CO N</span>
@@ -1073,14 +1080,14 @@ function renderLunar(){
     th+=`<th class="dth${w>=5?' weth':''}${isToday?' tdth':''}"><span class="dth-n">${d}</span><span class="dth-d">${DS[w]}</span></th>`;
   }
   th+=`<th class="sth std-hrs">Ore</th><th class="sth std-sp">SP</th><th class="sth std-co">CO</th><th class="sth std-cm">CM</th><th class="sth std-lfp">LFP</th></tr></thead>`;
-  let tb='<tbody>';let tH=0,tSP=0,tSPP=0,tCO=0,tCM=0,tLFP=0;
+  let tb='<tbody>';let tH=0,tSP=0,tSP05=0,tSPP=0,tCO=0,tCM=0,tLFP=0;
   [1,2].forEach(tura=>{
     if(curTuraL && curTuraL!==tura)return;
     const emps=S.emps.filter(e=>e.tura===tura&&isEmpActiveInMonth(e,y,m));
     if(!emps.length)return;
     tb+=`<tr class="srow"><td colspan="${days+6}">Tura ${tura}</td></tr>`;
     emps.forEach(e=>{
-      let h=0,sp=0,spp=0,co=0,cm=0,lfp=0;
+      let h=0,sp=0,sp05=0,spp=0,co=0,cm=0,lfp=0;
       const isMe=isEmp()&&currentUser.id===e.id;
       tb+=`<tr class="drow${isMe?' my-row':''}"><td class="ntd">${e.name}</td>`;
       for(let d=1;d<=days;d++){
@@ -1095,6 +1102,7 @@ function renderLunar(){
           if(cell.type==='code'){
             const code=normalizeCode(cell.code);
             if(code==='SP')sp++;
+            else if(code==='SP0.5')sp05++;
             else if(code==='SP+')spp++;
             else if(code==='CO')co++;
             else if(code==='CM')cm++;
@@ -1106,12 +1114,12 @@ function renderLunar(){
         tb+=`<td class="dtd${w>=5?' we':''}${isToday2?' today':''}${dayActive?' clickable':' locked'}" ${click}>
           <div class="cell ${dis.cls}"><div class="cell-h">${dis.h||'·'}</div>${dis.iv?`<div class="cell-iv">${dis.iv}</div>`:''}</div></td>`;
       }
-      const spTotal=sp+spp*1.5;
-      tH+=h;tSP+=sp;tSPP+=spp;tCO+=co;tCM+=cm;tLFP+=lfp;
+      const spTotal=sp+sp05*0.5+spp*1.5;
+      tH+=h;tSP+=sp;tSP05+=sp05;tSPP+=spp;tCO+=co;tCM+=cm;tLFP+=lfp;
       tb+=`<td class="std">${h||'—'}</td><td class="std sp">${spTotal||'—'}</td><td class="std co">${co||'—'}</td><td class="std cm">${cm||'—'}</td><td class="std lfp">${lfp||'—'}</td></tr>`;
     });
   });
-  const tSpTotal=tSP+tSPP*1.5;
+  const tSpTotal=tSP+tSP05*0.5+tSPP*1.5;
   tb+=`<tr class="trow"><td>Total</td>${Array(days).fill('<td></td>').join('')}<td class="t-hrs">${tH}</td><td class="t-sp">${tSpTotal||'—'}</td><td class="t-co">${tCO||'—'}</td><td class="t-cm">${tCM||'—'}</td><td class="t-lfp">${tLFP||'—'}</td></tr></tbody>`;
   document.getElementById('tbl-l').innerHTML=th+tb;
 }
@@ -1174,7 +1182,7 @@ async function doXLSX(){
   const C={
     paper:'FFFAF8F4',c1:'FFF2EDE3',c2:'FFE8E0D0',c3:'FFDDD4C0',rule:'FFD0C8B4',
     ink:'FF1E1A12',ink2:'FF5A5040',ink3:'FF9A8E78',ink4:'FFC8BCAA',
-    spBg:'FFE6F3EC',sp:'FF1E5C38',sppBg:'FFFDEEDD',spp:'FF6B3200',
+    spBg:'FFE6F3EC',sp:'FF1E5C38',sp05Bg:'FFD4F0EB',sp05:'FF0D6E5A',sppBg:'FFFDEEDD',spp:'FF6B3200',
     coBg:'FFDAEAF8',co:'FF14446E',conBg:'FFFFF5D6',con:'FF7A5500',
     cfpBg:'FFFCE8E8',cfp:'FF7A1818',offBg:'FFEEEBE4',off:'FF6A6258',
     lfpBg:'FFFCE8E8',lfp:'FF7A1818',lpBg:'FFE2F4F3',lp:'FF0F6A67',
@@ -1195,6 +1203,12 @@ async function doXLSX(){
   const bdr=(s='thin')=>({style:s,color:{argb:C.rule}});
   const bdrAll=(s='thin')=>({top:bdr(s),bottom:bdr(s),left:bdr(s),right:bdr(s)});
   const aln=(h,v='middle',wrap=false)=>({horizontal:h,vertical:v,wrapText:wrap});
+  const toArgb=hex=>'FF'+hex.replace('#','').toUpperCase();
+  const getSecColors=sec=>{
+    if(C.secs[sec])return C.secs[sec];
+    const s=S.secs.find(x=>x.id===sec);
+    return s?{bg:toArgb(s.bg),c:toArgb(s.c)}:{bg:C.c2,c:C.ink2};
+  };
 
   function cellStyle(c,isInactive=false){
     if(isInactive)return{bg:C.inactiveBg,fg:C.inactive,bold:false};
@@ -1202,7 +1216,7 @@ async function doXLSX(){
     if(c.type==='interval')return{bg:C.c1,fg:C.ink,bold:true};
     if(c.type==='code'){
       const code=normalizeCode(c.code);
-      const m2={SP:{bg:C.spBg,fg:C.sp},'SP+':{bg:C.sppBg,fg:C.spp},OFF:{bg:C.offBg,fg:C.off},LP:{bg:C.lpBg,fg:C.lp},LFP:{bg:C.lfpBg,fg:C.lfp},CM:{bg:C.cmBg,fg:C.cm}};
+      const m2={SP:{bg:C.spBg,fg:C.sp},'SP0.5':{bg:C.sp05Bg,fg:C.sp05},'SP+':{bg:C.sppBg,fg:C.spp},OFF:{bg:C.offBg,fg:C.off},LP:{bg:C.lpBg,fg:C.lp},LFP:{bg:C.lfpBg,fg:C.lfp},CM:{bg:C.cmBg,fg:C.cm}};
       if(c.code==='CO')return c.approved===false?{bg:C.conBg,fg:C.con,bold:false}:{bg:C.coBg,fg:C.co,bold:false};
       return m2[code]||{bg:C.paper,fg:C.ink,bold:false};
     }
@@ -1212,7 +1226,7 @@ async function doXLSX(){
     if(isInactive)return'IN';
     if(!c)return'';
     if(c.type==='interval')return`${p2(c.s)}-${p2(c.e)} (${ch(c.s,c.e)}h)`;
-    if(c.type==='code'){if(c.code==='CO')return c.approved===false?'CO (N)':c.approved===true?'CO (A)':'CO';return normalizeCode(c.code);}
+    if(c.type==='code'){if(c.code==='CO')return c.approved===false?'CO (N)':c.approved===true?'CO (A)':'CO';const nc=normalizeCode(c.code);return nc==='SP0.5'?'SP½':nc;}
     return'';
   }
 
@@ -1243,14 +1257,14 @@ async function doXLSX(){
   // Data
   SEC_ORDER.forEach(sec=>{
     const emps=(g[sec]||[]).filter(e=>isEmpActiveInMonth(e,y,m));if(!emps.length)return;
-    const sc=C.secs[sec];
+    const sc=getSecColors(sec);
     // Section row
     const sR=ws1.addRow([SEC_LBL[sec]]);sR.height=17;
     ws1.mergeCells(sR.number,1,sR.number,colCount);
     sR.getCell(1).fill=fill(sc.bg);sR.getCell(1).font=fnt(sc.c,true,9);sR.getCell(1).alignment=aln('left');
 
     emps.forEach(e=>{
-      let h=0,sp=0,spp=0,co=0,cm=0,lfp=0;
+      let h=0,sp=0,sp05=0,spp=0,co=0,cm=0,lfp=0;
       const rowData=[e.name,SEC_LBL[sec]];
       for(let d=1;d<=days;d++){
         const dateStr=`${y}-${p2(m+1)}-${p2(d)}`;
@@ -1262,13 +1276,14 @@ async function doXLSX(){
         else{
           const code=normalizeCode(c.code);
           if(code==='SP')sp++;
+          else if(code==='SP0.5')sp05++;
           else if(code==='SP+')spp++;
           else if(code==='CO')co++;
           else if(code==='CM')cm++;
           else if(code==='LFP')lfp++;
         }
       }
-      const spTot=sp+spp*1.5;
+      const spTot=sp+sp05*0.5+spp*1.5;
       rowData.push(h||'',spTot||'',co||'',cm||'',lfp||'');
       const dR=ws1.addRow(rowData);dR.height=22;
       // Name
@@ -1296,9 +1311,9 @@ async function doXLSX(){
   });
 
   // Total row
-  let tH=0,tSP=0,tSPP=0,tCO=0,tCM=0,tLFP=0;
-  S.emps.filter(e=>isEmpActiveInMonth(e,y,m)).forEach(e=>{for(let d=1;d<=days;d++){const dateStr=`${y}-${p2(m+1)}-${p2(d)}`;if(!isEmpActiveOnDate(e,dateStr))continue;const c=S.cells[ck(e.id,y,m,d)];if(!c)continue;if(c.type==='interval')tH+=ch(c.s,c.e);if(c.type==='code'){const code=normalizeCode(c.code);if(code==='SP')tSP++;if(code==='SP+')tSPP++;if(code==='CO')tCO++;if(code==='CM')tCM++;if(code==='LFP')tLFP++;}}});
-  const tSpTot=tSP+tSPP*1.5;
+  let tH=0,tSP=0,tSP05=0,tSPP=0,tCO=0,tCM=0,tLFP=0;
+  S.emps.filter(e=>isEmpActiveInMonth(e,y,m)).forEach(e=>{for(let d=1;d<=days;d++){const dateStr=`${y}-${p2(m+1)}-${p2(d)}`;if(!isEmpActiveOnDate(e,dateStr))continue;const c=S.cells[ck(e.id,y,m,d)];if(!c)continue;if(c.type==='interval')tH+=ch(c.s,c.e);if(c.type==='code'){const code=normalizeCode(c.code);if(code==='SP')tSP++;if(code==='SP0.5')tSP05++;if(code==='SP+')tSPP++;if(code==='CO')tCO++;if(code==='CM')tCM++;if(code==='LFP')tLFP++;}}});
+  const tSpTot=tSP+tSP05*0.5+tSPP*1.5;
   const totR=ws1.addRow(['TOTAL','',...Array(days).fill(''),tH||'—',tSpTot||'—',tCO||'—',tCM||'—',tLFP||'—']);
   totR.height=26;
   totR.eachCell((cell,col)=>{
@@ -1330,13 +1345,13 @@ async function doXLSX(){
   let s2H=0,s2SP=0,s2CO=0,s2CM=0,s2LFP=0;
   SEC_ORDER.forEach(sec=>{
     const emps=(g[sec]||[]).filter(e=>isEmpActiveInMonth(e,y,m));if(!emps.length)return;
-    const sc=C.secs[sec];
+    const sc=getSecColors(sec);
     const sR2=ws2.addRow([SEC_LBL[sec]]);sR2.height=17;
     ws2.mergeCells(sR2.number,1,sR2.number,7);
     sR2.getCell(1).fill=fill(sc.bg);sR2.getCell(1).font=fnt(sc.c,true,9);sR2.getCell(1).alignment=aln('left');
     emps.forEach(e=>{
       const d=data[e.id]||{};
-      const empSpTot=(d.sp||0)+(d.spp||0)*1.5;
+      const empSpTot=(d.sp||0)+(d.sp05||0)*0.5+(d.spp||0)*1.5;
       s2H+=d.h||0;s2SP+=empSpTot;s2CO+=d.co||0;s2CM+=d.cm||0;s2LFP+=d.lfp||0;
       const dR2=ws2.addRow([e.name,SEC_LBL[sec],d.h||0,empSpTot||0,d.co||0,d.cm||0,d.lfp||0]);
       dR2.height=22;
@@ -1377,7 +1392,7 @@ function buildWh(el,items,def){
 }
 function getWh(el){const i=Math.round(el.scrollTop/38);const it=el.querySelectorAll('.wh-item')[i];return it?parseInt(it.dataset.v):0;}
 function updComp(){document.getElementById('comp-h').textContent=ch(getWh(document.getElementById('wh-s')),getWh(document.getElementById('wh-e')));}
-function resetCodeBtns(){['SP','SPP','CO','CM','OFF','LP','LFP'].forEach(id=>document.getElementById('cbtn-'+id)?.classList.remove('sel'));}
+function resetCodeBtns(){['SP','SP05','SPP','CO','CM','OFF','LP','LFP'].forEach(id=>document.getElementById('cbtn-'+id)?.classList.remove('sel'));}
 
 function openCellInfo(key,empName,y,m,d){
   const cell=S.cells[key];
@@ -1649,10 +1664,19 @@ async function changeEmpPass(){
   const p=prompt('Parola noua pentru toti angajatii:');
   if(!p||!p.trim())return;
   S.empPass=p.trim();empPassVisible=false;
-  await db.ref('setari/emp_pass').set(p.trim());
+  const hash=await sha256(p.trim());
+  await db.ref('setari/emp_pass').set(hash);
   toast('Parola angajati actualizata');
   renderEmps();
 }
+
+// Apeleaza din consola browser: setAdminPass('parola_noua')
+window.setAdminPass=async function(p){
+  if(!p||!db){console.error('Parola invalida sau Firebase neconfigurat');return;}
+  const hash=await sha256(p);
+  await db.ref('setari/admin_pass').set(hash);
+  console.log('Parola admin setata cu succes (hash SHA-256)');
+};
 
 // ── TOAST ───────────────────────────────────────────────
 function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2200);}

@@ -690,13 +690,8 @@ const isEmp   = ()=>currentUser&&currentUser.role==='employee';
 function mondayOf(d){const dt=new Date(d);dt.setHours(0,0,0,0);const day=(dt.getDay()+6)%7;dt.setDate(dt.getDate()-day);return dt;}
 let sDate=mondayOf(new Date());
 function getWeekDays(){const days=[];for(let i=0;i<7;i++){const d=new Date(sDate);d.setDate(d.getDate()+i);days.push(d);}return days;}
-async function shiftW(n){sDate.setDate(sDate.getDate()+n*7);await loadWeekMonths();renderSaptamanal();}
-async function goToday(){sDate=mondayOf(new Date());await loadWeekMonths();renderSaptamanal();}
-async function loadWeekMonths(){
-  const days=getWeekDays();
-  const months=new Set(days.map(d=>`${d.getFullYear()}-${d.getMonth()}`));
-  await Promise.all([...months].map(mk=>{const[y,m]=mk.split('-').map(Number);return loadPontajMonth(y,m);}));
-}
+function shiftW(n){sDate.setDate(sDate.getDate()+n*7);renderSaptamanal();}
+function goToday(){sDate=mondayOf(new Date());renderSaptamanal();}
 
 let lY=new Date().getFullYear(), lM=new Date().getMonth();
 let curTab='lunar', editId=null, pkKey=null;
@@ -837,11 +832,12 @@ async function loadData(){
     return false;
   }
   try{
-    const [secsSnap,empsSnap,setariSnap,bonusuriSnap]=await Promise.all([
+    const [secsSnap,empsSnap,setariSnap,bonusuriSnap,pontajSnap]=await Promise.all([
       db.ref('sectii').once('value'),
       db.ref('angajati').once('value'),
       db.ref('setari').once('value'),
       db.ref('bonusuri').once('value'),
+      db.ref('pontaj').once('value'),
     ]);
     // Sections
     const secsData=secsSnap.val()||{};
@@ -865,33 +861,28 @@ async function loadData(){
     const setari=setariSnap.val()||{};
     S.empPass=setari.emp_pass||'';
     S.bonusAll=bonusuriSnap.val()||{};
-    // Reset pontaj cache and load only current month
+    // Pontaj
+    const pontaj=pontajSnap.val()||{};
     S.cells={};
-    S.loadedMonths=new Set();
-    await loadPontajMonth(lY,lM);
-    return true;
-  }catch(e){console.error(e);toast('Eroare la conectare Firebase');return false;}
-}
-
-async function loadPontajMonth(y,m){
-  if(!db)return;
-  const mk=`${y}-${p2(m+1)}`;
-  if(S.loadedMonths.has(mk))return;
-  S.loadedMonths.add(mk);
-  const start=`${y}-${p2(m+1)}-01`;
-  const end=`${y}-${p2(m+1)}-31`;
-  await Promise.all(S.emps.map(async e=>{
-    try{
-      const snap=await db.ref(`pontaj/${e.id}`)
-        .orderByKey().startAt(start).endAt(end).once('value');
-      const dates=snap.val()||{};
-      Object.entries(dates).forEach(([date,cell])=>{
+    Object.entries(pontaj).forEach(([eid,dates])=>{
+      Object.entries(dates||{}).forEach(([date,cell])=>{
         const row={...cell};
         if(row.type==='code')row.code=normalizeCode(row.code);
-        S.cells[`${e.id}-${date}`]=row;
+        S.cells[`${eid}-${date}`]=row;
       });
-    }catch(_){}
-  }));
+    });
+    return true;
+  }catch(e){
+    console.error('loadData error:',e);
+    document.getElementById('loading-ovl').innerHTML=`
+      <div style="text-align:center;padding:40px 24px">
+        <div style="font-size:28px;margin-bottom:14px;opacity:.5">⚠️</div>
+        <div style="font-size:14px;font-weight:600;color:var(--ink);margin-bottom:8px">Eroare de conectare</div>
+        <div style="font-size:12px;color:var(--ink3);line-height:1.7">${e.message||'Nu s-a putut conecta la Firebase.'}<br>Verifica conexiunea si reincarca.</div>
+        <button onclick="location.reload()" style="margin-top:16px;padding:8px 20px;background:var(--acc);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px">Reincearca</button>
+      </div>`;
+    return false;
+  }
 }
 
 async function saveCell(key,cellData){
@@ -1587,18 +1578,9 @@ async function clearCell(){
 }
 
 // ── TABS / NAV ───────────────────────────────────────────
-async function shiftM(n){
-  lM+=n;
-  if(lM<0){lM=11;lY--;}
-  if(lM>11){lM=0;lY++;}
-  const tbl=document.getElementById('lunar-tbl');
-  if(tbl)tbl.style.opacity='0.4';
-  await loadPontajMonth(lY,lM);
-  if(tbl)tbl.style.opacity='';
-  renderLunar();
-}
+function shiftM(n){lM+=n;if(lM<0){lM=11;lY--;}if(lM>11){lM=0;lY++;}renderLunar();}
 
-async function goTab(t){
+function goTab(t){
   curTab=t;
   const tabNames=['lunar','saptamanal','angajati'];
   document.querySelectorAll('.tab').forEach((el,i)=>el.classList.toggle('on',tabNames[i]===t));
@@ -1608,8 +1590,8 @@ async function goTab(t){
   if(t==='angajati'){btn.style.display=isAdmin()?'':'none';renderEmps();}
   else btn.style.display='none';
   document.getElementById('vara-btn').style.display=(t==='lunar'&&isAdmin())?'':'none';
-  if(t==='lunar'){await loadPontajMonth(lY,lM);renderLunar();}
-  else if(t==='saptamanal'){await loadWeekMonths();renderSaptamanal();}
+  if(t==='lunar')renderLunar();
+  else if(t==='saptamanal')renderSaptamanal();
 }
 
 // ── BONUS VARA ───────────────────────────────────────────

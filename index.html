@@ -677,7 +677,7 @@ const DF  = ['Luni','Marti','Miercuri','Joi','Vineri','Sambata','Duminica'];
 const SH = [6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22];
 const EH = [8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,0,1,2];
 // ── STATE ────────────────────────────────────────────────
-let S = { emps: [], cells: {}, secs: [], empPass:'', bonusAll:{} };
+let S = { emps: [], cells: {}, secs: [], empPass:'', bonusAll:{}, loadedMonths: new Set() };
 let curTuraL=0, curTuraS=0, curTuraA=0, editTura=1, editStatus='activ';
 
 
@@ -690,8 +690,13 @@ const isEmp   = ()=>currentUser&&currentUser.role==='employee';
 function mondayOf(d){const dt=new Date(d);dt.setHours(0,0,0,0);const day=(dt.getDay()+6)%7;dt.setDate(dt.getDate()-day);return dt;}
 let sDate=mondayOf(new Date());
 function getWeekDays(){const days=[];for(let i=0;i<7;i++){const d=new Date(sDate);d.setDate(d.getDate()+i);days.push(d);}return days;}
-function shiftW(n){sDate.setDate(sDate.getDate()+n*7);renderSaptamanal();}
-function goToday(){sDate=mondayOf(new Date());renderSaptamanal();}
+async function shiftW(n){sDate.setDate(sDate.getDate()+n*7);await loadWeekMonths();renderSaptamanal();}
+async function goToday(){sDate=mondayOf(new Date());await loadWeekMonths();renderSaptamanal();}
+async function loadWeekMonths(){
+  const days=getWeekDays();
+  const months=new Set(days.map(d=>`${d.getFullYear()}-${d.getMonth()}`));
+  await Promise.all([...months].map(mk=>{const[y,m]=mk.split('-').map(Number);return loadPontajMonth(y,m);}));
+}
 
 let lY=new Date().getFullYear(), lM=new Date().getMonth();
 let curTab='lunar', editId=null, pkKey=null;
@@ -832,41 +837,61 @@ async function loadData(){
     return false;
   }
   try{
-    const snap=await db.ref('/').once('value');
-    const data=snap.val()||{};
+    const [secsSnap,empsSnap,setariSnap,bonusuriSnap]=await Promise.all([
+      db.ref('sectii').once('value'),
+      db.ref('angajati').once('value'),
+      db.ref('setari').once('value'),
+      db.ref('bonusuri').once('value'),
+    ]);
     // Sections
-    const secsData=data.sectii||{};
+    const secsData=secsSnap.val()||{};
     if(Object.keys(secsData).length){
       S.secs=Object.entries(secsData)
         .map(([id,s])=>({id,label:s.label,bg:s.bg,c:s.c,order:s.order??99}))
         .sort((a,b)=>a.order-b.order);
     } else {
       S.secs=[...DEFAULT_SECS];
-      // Seed defaults to Firebase
       const batch={};
       DEFAULT_SECS.forEach((s,i)=>{batch[s.id]={label:s.label,bg:s.bg,c:s.c,order:i};});
       db.ref('sectii').set(batch);
     }
     updateSecVars();
     // Employees
-    const angajati=data.angajati||{};
+    const angajati=empsSnap.val()||{};
     S.emps=Object.entries(angajati)
       .map(([id,e])=>({id,name:e.name,sec:e.section,tura:e.tura||1,active:e.active!==false,startFrom:e.startFrom||null,inactiveFrom:e.inactiveFrom||null}))
       .sort((a,b)=>SEC_ORDER.indexOf(a.sec)-SEC_ORDER.indexOf(b.sec)||a.name.localeCompare(b.name));
-    // Cells
-    const pontaj=data.pontaj||{};
+    // Settings & bonusuri
+    const setari=setariSnap.val()||{};
+    S.empPass=setari.emp_pass||'';
+    S.bonusAll=bonusuriSnap.val()||{};
+    // Reset pontaj cache and load only current month
     S.cells={};
-    Object.entries(pontaj).forEach(([eid,dates])=>{
-      Object.entries(dates||{}).forEach(([date,cell])=>{
+    S.loadedMonths=new Set();
+    await loadPontajMonth(lY,lM);
+    return true;
+  }catch(e){console.error(e);toast('Eroare la conectare Firebase');return false;}
+}
+
+async function loadPontajMonth(y,m){
+  if(!db)return;
+  const mk=`${y}-${p2(m+1)}`;
+  if(S.loadedMonths.has(mk))return;
+  S.loadedMonths.add(mk);
+  const start=`${y}-${p2(m+1)}-01`;
+  const end=`${y}-${p2(m+1)}-31`;
+  await Promise.all(S.emps.map(async e=>{
+    try{
+      const snap=await db.ref(`pontaj/${e.id}`)
+        .orderByKey().startAt(start).endAt(end).once('value');
+      const dates=snap.val()||{};
+      Object.entries(dates).forEach(([date,cell])=>{
         const row={...cell};
         if(row.type==='code')row.code=normalizeCode(row.code);
-        S.cells[`${eid}-${date}`]=row;
+        S.cells[`${e.id}-${date}`]=row;
       });
-    });
-    S.empPass=(data.setari?.emp_pass)||'';
-    S.bonusAll=data.bonusuri||{};
-    return true;
-  }catch(e){toast('Eroare la conectare Firebase');return false;}
+    }catch(_){}
+  }));
 }
 
 async function saveCell(key,cellData){
@@ -1562,9 +1587,18 @@ async function clearCell(){
 }
 
 // ── TABS / NAV ───────────────────────────────────────────
-function shiftM(n){lM+=n;if(lM<0){lM=11;lY--;}if(lM>11){lM=0;lY++;}renderLunar();}
+async function shiftM(n){
+  lM+=n;
+  if(lM<0){lM=11;lY--;}
+  if(lM>11){lM=0;lY++;}
+  const tbl=document.getElementById('lunar-tbl');
+  if(tbl)tbl.style.opacity='0.4';
+  await loadPontajMonth(lY,lM);
+  if(tbl)tbl.style.opacity='';
+  renderLunar();
+}
 
-function goTab(t){
+async function goTab(t){
   curTab=t;
   const tabNames=['lunar','saptamanal','angajati'];
   document.querySelectorAll('.tab').forEach((el,i)=>el.classList.toggle('on',tabNames[i]===t));
@@ -1574,8 +1608,8 @@ function goTab(t){
   if(t==='angajati'){btn.style.display=isAdmin()?'':'none';renderEmps();}
   else btn.style.display='none';
   document.getElementById('vara-btn').style.display=(t==='lunar'&&isAdmin())?'':'none';
-  if(t==='lunar')renderLunar();
-  else if(t==='saptamanal')renderSaptamanal();
+  if(t==='lunar'){await loadPontajMonth(lY,lM);renderLunar();}
+  else if(t==='saptamanal'){await loadWeekMonths();renderSaptamanal();}
 }
 
 // ── BONUS VARA ───────────────────────────────────────────

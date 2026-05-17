@@ -981,13 +981,20 @@ async function loginEmp(){
 async function loginAdmin(){
   const pass=document.getElementById('l-admin-pass').value;
   const errEl=document.getElementById('login-err');errEl.textContent='';
-  if(!pass){errEl.textContent='Introdu parola.';return;}
   if(!db){errEl.textContent='Eroare: Firebase neconfigurat.';return;}
   const btn=document.querySelector('#lf-admin .btn-login');
   btn.disabled=true;btn.textContent='Se verifica...';
   const snap=await db.ref('setari/admin_pass').once('value');
   btn.disabled=false;btn.textContent='Intra';
-  if(!snap.val()){errEl.textContent='Parola incorecta.';return;}
+  if(!snap.val()){
+    // No password set — setup mode: allow login, force set password
+    currentUser={role:'admin'};
+    localStorage.setItem('ptUser',JSON.stringify(currentUser));
+    showApp();
+    setTimeout(()=>{toast('Parola admin nu e setata — seteaz-o acum!');goTab('angajati');},600);
+    return;
+  }
+  if(!pass){errEl.textContent='Introdu parola.';return;}
   const hash=await sha256(pass);
   if(snap.val()!==hash){errEl.textContent='Parola incorecta.';return;}
   currentUser={role:'admin'};
@@ -1893,6 +1900,10 @@ async function savePass(){
     btn.disabled=false;btn.textContent='Salveaza';
   }
 }
+
+// urgenta: setAdminPass('parola') din consola browser
+window.setAdminPass=async(p)=>{if(!p||!db)return;await db.ref('setari/admin_pass').set(await sha256(p));console.log('Admin pass reset OK');};
+window.setEmpPass=async(p)=>{if(!p||!db)return;await db.ref('setari/emp_pass').set(await sha256(p));console.log('Emp pass reset OK');};
 
 // ── TOAST ───────────────────────────────────────────────
 function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2200);}

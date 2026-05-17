@@ -556,6 +556,37 @@ table.mt td.vara-cell.vara-admin:hover{filter:brightness(.93);}
   </div>
 </div>
 
+<!-- PASS MODAL -->
+<div class="ovl" id="pass-modal" onclick="closePassModal()">
+  <div class="msheet" onclick="event.stopPropagation()">
+    <div class="mhandle"></div>
+    <div class="mtitle" id="pass-modal-title">Schimba parola</div>
+    <div class="field" id="pass-cur-field">
+      <label>Parola curenta</label>
+      <div class="lfield-wrap">
+        <input id="f-pass-cur" type="password" placeholder="Parola actuala" autocomplete="current-password">
+        <button class="eye-btn" type="button" onclick="toggleEye('f-pass-cur',this)" tabindex="-1"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
+      </div>
+    </div>
+    <div class="field">
+      <label>Parola noua</label>
+      <div class="lfield-wrap">
+        <input id="f-pass-new" type="password" placeholder="Parola noua" autocomplete="new-password">
+        <button class="eye-btn" type="button" onclick="toggleEye('f-pass-new',this)" tabindex="-1"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
+      </div>
+    </div>
+    <div class="field">
+      <label>Confirma parola noua</label>
+      <input id="f-pass-confirm" type="password" placeholder="Repeta parola noua" autocomplete="new-password">
+    </div>
+    <div id="pass-err" style="color:var(--cfp);font-size:12px;min-height:16px;margin-bottom:6px;font-weight:500"></div>
+    <div class="mbtns">
+      <button class="btn-cancel" onclick="closePassModal()">Anuleaza</button>
+      <button class="btn-save" id="pass-save-btn" onclick="savePass()">Salveaza</button>
+    </div>
+  </div>
+</div>
+
 <!-- VARA MODAL -->
 <div class="ovl" id="vara-ovl">
   <div class="msheet">
@@ -995,10 +1026,14 @@ function renderEmps(){
   // Emp pass + section management (admin only)
   if(isAdmin()){
     html+=`<div class="emp-pass-row">
+      <span class="emp-pass-lbl">Parola admin</span>
+      <span style="font-size:12px;color:var(--ink3);flex:1">••••••••</span>
+      <button class="btn-add-sec" onclick="openPassModal('admin')">Schimba</button>
+    </div>`;
+    html+=`<div class="emp-pass-row">
       <span class="emp-pass-lbl">Parola angajati</span>
-      <span id="emp-pass-val" style="font-family:var(--mono);font-size:13px;font-weight:600;color:var(--ink);flex:1">${S.empPass?'•'.repeat(S.empPass.length):'—'}</span>
-      ${S.empPass?`<button class="sec-chip-btn" id="emp-pass-eye" onclick="toggleEmpPassViz()" style="width:26px;height:26px;flex-shrink:0"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>`:''}
-      <button class="btn-add-sec" onclick="changeEmpPass()">Schimba</button>
+      <span style="font-size:12px;color:var(--ink3);flex:1">${S.empPass?'••••••••':'— nesetata —'}</span>
+      <button class="btn-add-sec" onclick="openPassModal('emp')">Schimba</button>
     </div>`;
     html+=`<div class="sec-mgmt">
       <div class="sec-hdr"><div class="sec-line"></div><div class="sec-lbl">Sectii</div><div class="sec-line"></div></div>
@@ -1803,33 +1838,61 @@ async function saveEmp(){
     await db.ref(`angajati/${id}`).set({name,section:sec,tura:editTura,active:true,startFrom});
   }
 }
-let empPassVisible=false;
-function toggleEmpPassViz(){
-  empPassVisible=!empPassVisible;
-  const val=document.getElementById('emp-pass-val');
-  if(val)val.textContent=empPassVisible?S.empPass:'•'.repeat(S.empPass.length);
-  const eye=document.getElementById('emp-pass-eye');
-  if(eye)eye.innerHTML=empPassVisible
-    ?'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>'
-    :'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
-}
-async function changeEmpPass(){
-  const p=prompt('Parola noua pentru toti angajatii:');
-  if(!p||!p.trim())return;
-  S.empPass=p.trim();empPassVisible=false;
-  const hash=await sha256(p.trim());
-  await db.ref('setari/emp_pass').set(hash);
-  toast('Parola angajati actualizata');
-  renderEmps();
+
+let _passModalRole=null;
+
+function openPassModal(role){
+  _passModalRole=role;
+  const isAdmin=role==='admin';
+  document.getElementById('pass-modal-title').textContent=isAdmin?'Schimba parola Admin':'Schimba parola Angajati';
+  document.getElementById('pass-cur-field').style.display=isAdmin?'':'none';
+  document.getElementById('f-pass-cur').value='';
+  document.getElementById('f-pass-new').value='';
+  document.getElementById('f-pass-confirm').value='';
+  document.getElementById('pass-err').textContent='';
+  const btn=document.getElementById('pass-save-btn');
+  btn.disabled=false;btn.textContent='Salveaza';
+  document.getElementById('pass-modal').classList.add('open');
+  setTimeout(()=>(isAdmin?document.getElementById('f-pass-cur'):document.getElementById('f-pass-new')).focus(),300);
 }
 
-// Apeleaza din consola browser: setAdminPass('parola_noua')
-window.setAdminPass=async function(p){
-  if(!p||!db){console.error('Parola invalida sau Firebase neconfigurat');return;}
-  const hash=await sha256(p);
-  await db.ref('setari/admin_pass').set(hash);
-  console.log('Parola admin setata cu succes (hash SHA-256)');
-};
+function closePassModal(){
+  document.getElementById('pass-modal').classList.remove('open');
+  _passModalRole=null;
+}
+
+async function savePass(){
+  const errEl=document.getElementById('pass-err');
+  errEl.textContent='';
+  const newPass=document.getElementById('f-pass-new').value;
+  const confirmPass=document.getElementById('f-pass-confirm').value;
+  if(!newPass){errEl.textContent='Introdu parola noua.';return;}
+  if(newPass.length<4){errEl.textContent='Parola trebuie sa aiba cel putin 4 caractere.';return;}
+  if(newPass!==confirmPass){errEl.textContent='Parolele nu coincid.';return;}
+  const btn=document.getElementById('pass-save-btn');
+  btn.disabled=true;btn.textContent='Se salveaza...';
+  try{
+    if(_passModalRole==='admin'){
+      const curPass=document.getElementById('f-pass-cur').value;
+      if(!curPass){errEl.textContent='Introdu parola curenta.';btn.disabled=false;btn.textContent='Salveaza';return;}
+      const snap=await db.ref('setari/admin_pass').once('value');
+      if(snap.val()){
+        const curHash=await sha256(curPass);
+        if(snap.val()!==curHash){errEl.textContent='Parola curenta incorecta.';btn.disabled=false;btn.textContent='Salveaza';return;}
+      }
+      await db.ref('setari/admin_pass').set(await sha256(newPass));
+    } else {
+      await db.ref('setari/emp_pass').set(await sha256(newPass));
+      S.empPass=newPass;
+    }
+    closePassModal();
+    toast('Parola actualizata cu succes');
+    if(_passModalRole==='emp')renderEmps();
+  }catch(e){
+    errEl.textContent='Eroare la salvare in Firebase: '+(e.message||'verifica conexiunea');
+    btn.disabled=false;btn.textContent='Salveaza';
+  }
+}
 
 // ── TOAST ───────────────────────────────────────────────
 function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2200);}

@@ -486,6 +486,7 @@ table.mt td.vara-cell.vara-admin:hover{filter:brightness(.93);}
         <button class="tura-btn" id="tfs-2" onclick="setTuraS(2)">T2</button>
       </div>
       <button class="mnav-act" onclick="goToday()">Azi</button>
+      <button class="mnav-act" id="xlsx-week-btn" onclick="doXLSXWeek()" style="display:none">Descarca XLSX</button>
     </div>
     <div class="tscroll"><table class="mt" id="tbl-s"></table></div>
   </div>
@@ -1018,6 +1019,7 @@ function showApp(){
   document.getElementById('user-lbl').textContent=isAdmin()?'Admin':'Angajat';
   // XLSX only for admin
   document.getElementById('xlsx-btn').style.display=isAdmin()?'':'none';
+  document.getElementById('xlsx-week-btn').style.display=isAdmin()?'':'none';
   // + Angajat only for admin
   document.getElementById('hbtn').style.display='none'; // goTab will handle this
   goTab('lunar');
@@ -1500,6 +1502,199 @@ async function doXLSX(){
     const blob=new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
     const url=URL.createObjectURL(blob);
     const a=document.createElement('a');a.href=url;a.download=`Pontaj_${MO[m]}_${y}.xlsx`;a.click();
+    URL.revokeObjectURL(url);
+    toast('Fisier XLSX descarcat');
+  }catch(err){toast('Eroare la generare');}
+}
+
+async function doXLSXWeek(){
+  if(!isAdmin())return;
+  toast('Se genereaza...');
+  const days=getWeekDays();
+  const d0=days[0],d6=days[6];
+  const weekLbl=`${d0.getDate()} ${MO[d0.getMonth()]}${d0.getMonth()!==d6.getMonth()?' – '+d6.getDate()+' '+MO[d6.getMonth()]:'–'+d6.getDate()+' '+MO[d6.getMonth()]} ${d6.getFullYear()}`;
+  const wb=new ExcelJS.Workbook();
+  wb.creator='Pontaj Bucatarie';wb.created=new Date();
+
+  const C={
+    paper:'FFFAF8F4',c1:'FFF2EDE3',c2:'FFE8E0D0',c3:'FFDDD4C0',rule:'FFD0C8B4',
+    ink:'FF1E1A12',ink2:'FF5A5040',ink3:'FF9A8E78',
+    spBg:'FFE6F3EC',sp:'FF1E5C38',sp05Bg:'FFD4F0EB',sp05:'FF0D6E5A',sppBg:'FFFDEEDD',spp:'FF6B3200',
+    coBg:'FFDAEAF8',co:'FF14446E',conBg:'FFFFF5D6',con:'FF7A5500',
+    cfpBg:'FFFCE8E8',cfp:'FF7A1818',offBg:'FFEEEBE4',off:'FF6A6258',
+    lfpBg:'FFFCE8E8',lfp:'FF7A1818',lpBg:'FFE2F4F3',lp:'FF0F6A67',
+    cmBg:'FFF6E3ED',cm:'FF8A2D5A',inactiveBg:'FFF4EFE6',inactive:'FF8B816F',weBg:'FFF9F5ED',
+  };
+  const fill=a=>({type:'pattern',pattern:'solid',fgColor:{argb:a}});
+  const fnt=(a,bold=false,size=10)=>({name:'Calibri',color:{argb:a},bold,size});
+  const bdr=(s='thin')=>({style:s,color:{argb:C.rule}});
+  const bdrAll=()=>({top:bdr(),bottom:bdr(),left:bdr(),right:bdr()});
+  const aln=(h,v='middle')=>({horizontal:h,vertical:v});
+  const toArgb=hex=>'FF'+hex.replace('#','').toUpperCase();
+  const getSecColors=sec=>{
+    if(C.secs&&C.secs[sec])return C.secs[sec];
+    const s=S.secs.find(x=>x.id===sec);
+    return s?{bg:toArgb(s.bg),c:toArgb(s.c)}:{bg:C.c2,c:C.ink2};
+  };
+  const DS_FULL=['Luni','Marti','Miercuri','Joi','Vineri','Sambata','Duminica'];
+  function wCellStyle(cell){
+    if(!cell)return{bg:C.paper,fg:C.ink4};
+    if(cell.type==='interval')return{bg:C.c1,fg:C.ink};
+    if(cell.type==='code'){
+      const code=normalizeCode(cell.code);
+      const m2={SP:{bg:C.spBg,fg:C.sp},'SP0.5':{bg:C.sp05Bg,fg:C.sp05},'SP+':{bg:C.sppBg,fg:C.spp},
+        OFF:{bg:C.offBg,fg:C.off},LP:{bg:C.lpBg,fg:C.lp},LFP:{bg:C.lfpBg,fg:C.lfp},CM:{bg:C.cmBg,fg:C.cm}};
+      if(code==='CO')return cell.approved===false?{bg:C.conBg,fg:C.con}:{bg:C.coBg,fg:C.co};
+      return m2[code]||{bg:C.paper,fg:C.ink};
+    }
+    return{bg:C.paper,fg:C.ink4};
+  }
+  function wCellVal(cell,dayActive){
+    if(!dayActive)return'IN';
+    if(!cell)return'';
+    if(cell.type==='interval')return`${p2(cell.s)}-${p2(cell.e)}`;
+    if(cell.type==='code'){
+      if(cell.code==='CO')return cell.approved===false?'CO (N)':cell.approved===true?'CO (A)':'CO';
+      const nc=normalizeCode(cell.code);return nc==='SP0.5'?'SP½':nc;
+    }
+    return'';
+  }
+
+  // ── Sheet 1: Program saptamanal (grid) ──────────────────
+  const ws1=wb.addWorksheet('Program saptamana');
+  ws1.properties.defaultRowHeight=22;
+  const colCount=10; // name + sectie + 7 days + ore
+  ws1.columns=[{width:22},{width:11},...Array(7).fill({width:12}),{width:9}];
+
+  const tR=ws1.addRow(['Program '+weekLbl]);
+  tR.height=30;ws1.mergeCells(1,1,1,colCount);
+  const tC=tR.getCell(1);tC.fill=fill(C.c2);tC.font=fnt(C.ink,true,13);tC.alignment=aln('left');
+  ws1.addRow([]);
+
+  const hArr=['Angajat','Sectie',...days.map((d,i)=>{const w=(d.getDay()+6)%7;return DS_FULL[w]+' '+d.getDate();}),'Total Ore'];
+  const hR=ws1.addRow(hArr);hR.height=28;
+  hR.eachCell((cell,col)=>{
+    const isWe=col>=3&&col<=9&&((days[col-3].getDay()+6)%7>=5);
+    cell.fill=fill(isWe?C.weBg:C.c2);
+    cell.font=fnt(C.ink2,true,9);
+    cell.alignment=col<=2?aln('left'):aln('center');
+    cell.border=bdrAll();
+  });
+
+  let tTotalH=0;
+  const g=grp();
+  [1,2].forEach(tura=>{
+    const emps=S.emps.filter(e=>e.tura===tura&&isEmpActiveInWeek(e));
+    if(!emps.length)return;
+    const sR=ws1.addRow([`Tura ${tura}`]);
+    ws1.mergeCells(sR.number,1,sR.number,colCount);
+    sR.getCell(1).fill=fill(C.c2);sR.getCell(1).font=fnt(C.ink2,true,9);sR.getCell(1).alignment=aln('left');
+    emps.forEach(e=>{
+      let h=0;
+      const rowData=[e.name,SEC_LBL[e.sec]||e.sec];
+      days.forEach(date=>{
+        const y2=date.getFullYear(),m2=date.getMonth(),d2=date.getDate();
+        const dateStr=isoDate(date);
+        const dayActive=isEmpActiveOnDate(e,dateStr);
+        const cell=dayActive?S.cells[ck(e.id,y2,m2,d2)]:null;
+        if(dayActive&&cell&&cell.type==='interval')h+=ch(cell.s,cell.e);
+        rowData.push(wCellVal(cell,dayActive));
+      });
+      rowData.push(h||0);
+      tTotalH+=h;
+      const dR=ws1.addRow(rowData);dR.height=22;
+      const sc=getSecColors(e.sec);
+      dR.getCell(1).fill=fill(C.paper);dR.getCell(1).font=fnt(C.ink,false,10);dR.getCell(1).alignment=aln('left');dR.getCell(1).border=bdrAll();
+      dR.getCell(2).fill=fill(sc.bg||C.c2);dR.getCell(2).font=fnt(sc.c||C.ink2,false,9);dR.getCell(2).alignment=aln('center');dR.getCell(2).border=bdrAll();
+      days.forEach((date,i)=>{
+        const y2=date.getFullYear(),m2=date.getMonth(),d2=date.getDate();
+        const dateStr=isoDate(date);
+        const dayActive=isEmpActiveOnDate(e,dateStr);
+        const cell=dayActive?S.cells[ck(e.id,y2,m2,d2)]:null;
+        const st=dayActive?wCellStyle(cell):{bg:C.inactiveBg,fg:C.inactive};
+        const tc=dR.getCell(i+3);
+        tc.fill=fill(st.bg);tc.font=fnt(st.fg,false,10);tc.alignment=aln('center');tc.border=bdrAll();
+      });
+      dR.getCell(10).fill=fill(C.c1);dR.getCell(10).font=fnt(C.ink,true,11);dR.getCell(10).alignment=aln('center');dR.getCell(10).border=bdrAll();
+    });
+  });
+  const totR=ws1.addRow(['TOTAL','',...Array(7).fill(''),tTotalH]);
+  totR.height=26;
+  totR.eachCell((cell,col)=>{
+    cell.fill=fill(C.c3);cell.font=fnt(C.ink,true,11);
+    cell.alignment=col<=2?aln('left'):aln('center');
+    cell.border={top:{style:'medium',color:{argb:C.ink3}},bottom:bdr(),left:bdr(),right:bdr()};
+  });
+  ws1.views=[{state:'frozen',xSplit:2,ySplit:3,activeCell:'C4'}];
+
+  // ── Sheet 2: Rezumat ore saptamana ──────────────────────
+  const ws2=wb.addWorksheet('Ore saptamana');
+  ws2.properties.defaultRowHeight=22;
+  ws2.columns=[{width:24},{width:12},{width:11},{width:9},{width:8},{width:8},{width:8}];
+
+  const t2R=ws2.addRow(['Ore '+weekLbl]);
+  t2R.height=30;ws2.mergeCells(1,1,1,7);
+  t2R.getCell(1).fill=fill(C.c2);t2R.getCell(1).font=fnt(C.ink,true,13);t2R.getCell(1).alignment=aln('left');
+  ws2.addRow([]);
+
+  const h2R=ws2.addRow(['Angajat','Sectie','Total Ore','SP','CO','CM','LFP']);
+  h2R.height=28;
+  h2R.eachCell((cell,col)=>{
+    cell.fill=fill(C.c2);cell.font=fnt(C.ink2,true,10);
+    cell.alignment=col<=2?aln('left'):aln('center');cell.border=bdrAll();
+  });
+
+  let s2H=0,s2SP=0,s2CO=0,s2CM=0,s2LFP=0;
+  [1,2].forEach(tura=>{
+    const emps=S.emps.filter(e=>e.tura===tura&&isEmpActiveInWeek(e));
+    if(!emps.length)return;
+    const sR2=ws2.addRow([`Tura ${tura}`]);
+    ws2.mergeCells(sR2.number,1,sR2.number,7);
+    sR2.getCell(1).fill=fill(C.c2);sR2.getCell(1).font=fnt(C.ink2,true,9);sR2.getCell(1).alignment=aln('left');
+    emps.forEach(e=>{
+      let h=0,sp=0,sp05=0,spp=0,co=0,cm=0,lfp=0;
+      days.forEach(date=>{
+        const y2=date.getFullYear(),m2=date.getMonth(),d2=date.getDate();
+        const dateStr=isoDate(date);
+        if(!isEmpActiveOnDate(e,dateStr))return;
+        const cell=S.cells[ck(e.id,y2,m2,d2)];
+        if(!cell)return;
+        if(cell.type==='interval')h+=ch(cell.s,cell.e);
+        if(cell.type==='code'){
+          const code=normalizeCode(cell.code);
+          if(code==='SP')sp++;else if(code==='SP0.5')sp05++;else if(code==='SP+')spp++;
+          else if(code==='CO')co++;else if(code==='CM')cm++;else if(code==='LFP')lfp++;
+        }
+      });
+      const spTot=sp+sp05*0.5+spp*1.5;
+      s2H+=h;s2SP+=spTot;s2CO+=co;s2CM+=cm;s2LFP+=lfp;
+      const sc=getSecColors(e.sec);
+      const dR2=ws2.addRow([e.name,SEC_LBL[e.sec]||e.sec,h||0,spTot||0,co||0,cm||0,lfp||0]);
+      dR2.height=22;
+      dR2.getCell(1).fill=fill(C.paper);dR2.getCell(1).font=fnt(C.ink,false,10);dR2.getCell(1).alignment=aln('left');dR2.getCell(1).border=bdrAll();
+      dR2.getCell(2).fill=fill(sc.bg||C.c2);dR2.getCell(2).font=fnt(sc.c||C.ink2,false,9);dR2.getCell(2).alignment=aln('center');dR2.getCell(2).border=bdrAll();
+      dR2.getCell(3).fill=fill(C.c1);dR2.getCell(3).font=fnt(C.ink,true,12);dR2.getCell(3).alignment=aln('center');dR2.getCell(3).border=bdrAll();
+      [[4,C.spBg,C.sp],[5,C.coBg,C.co],[6,C.cmBg,C.cm],[7,C.lfpBg,C.lfp]].forEach(([col,bg,fg])=>{
+        dR2.getCell(col).fill=fill(bg);dR2.getCell(col).font=fnt(fg,false,10);dR2.getCell(col).alignment=aln('center');dR2.getCell(col).border=bdrAll();
+      });
+    });
+  });
+  const tot2R=ws2.addRow(['TOTAL','',s2H,s2SP,s2CO,s2CM,s2LFP]);
+  tot2R.height=26;
+  tot2R.eachCell((cell,col)=>{
+    cell.fill=fill(C.c3);cell.font=fnt(C.ink,true,11);
+    cell.alignment=col<=2?aln('left'):aln('center');
+    cell.border={top:{style:'medium',color:{argb:C.ink3}},bottom:bdr(),left:bdr(),right:bdr()};
+  });
+  ws2.views=[{state:'frozen',xSplit:2,ySplit:3,activeCell:'C4'}];
+
+  try{
+    const buf=await wb.xlsx.writeBuffer();
+    const blob=new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');a.href=url;
+    const d0str=`${d0.getDate()}_${MO[d0.getMonth()]}_${d0.getFullYear()}`;
+    a.download=`Pontaj_Saptamana_${d0str}.xlsx`;a.click();
     URL.revokeObjectURL(url);
     toast('Fisier XLSX descarcat');
   }catch(err){toast('Eroare la generare');}

@@ -1,0 +1,107 @@
+{% extends 'pontaj/base.html' %}
+{% load pontaj_tags %}
+{% block title %}Statistici {{ title }}{% endblock %}
+{% block mobile_title %}Statistici{% endblock %}
+{% block content %}
+<div class="toolbar">
+  <div class="monthnav">
+    <a class="btn icon" href="{% qs luna=prev|date:'Y-m' %}" aria-label="Luna anterioară">{% icon 'left' %}</a>
+    <span class="label">{{ title }}</span>
+    <a class="btn icon" href="{% qs luna=next|date:'Y-m' %}" aria-label="Luna următoare">{% icon 'right' %}</a>
+  </div>
+  <span class="spacer"></span>
+  <span class="muted small">Comparat cu luna anterioară</span>
+</div>
+
+<div class="kpis">
+  {% for label, value, delta, foot in kpis %}
+  <div class="card kpi">
+    <div class="kpi-label">{{ label }}</div>
+    <div class="kpi-value">{{ value }}</div>
+    <div class="kpi-foot">
+      {% if delta is not None %}<span class="delta {% if delta > 0 %}up{% elif delta < 0 %}down{% endif %}">{% if delta > 0 %}+{% endif %}{{ delta }}%</span>{% endif %}
+      <span>{{ foot }}</span>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="stats-grid">
+  <div class="card card-pad">
+    <div class="card-title">Ore pe ultimele 6 luni</div>
+    <div class="vbars">
+      {% for label, hours, sp, current in trend %}
+      <div class="vbar{% if current %} cur{% endif %}" title="{{ hours }} ore · {{ sp|num }} SP">
+        <span class="vbar-val">{{ hours }}</span>
+        <div class="vbar-col" style="height:{% widthratio hours max_trend 120 %}px"></div>
+        <span class="vbar-lbl">{{ label }}</span>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  <div class="card card-pad">
+    <div class="card-title">Ore pe secții</div>
+    {% for sec, hours in sections %}
+    <div class="hbar">
+      <span><span class="dot" style="background:{{ sec.color }}"></span> {{ sec.label }}</span>
+      <div class="hbar-track"><div class="hbar-fill" style="width:{{ hours|pct:max_sec }}%;background:{{ sec.color }}"></div></div>
+      <span class="v">{{ hours }}</span>
+    </div>
+    {% empty %}<p class="muted">Nicio oră înregistrată.</p>{% endfor %}
+  </div>
+</div>
+
+<div class="stats-grid">
+  <div class="card card-pad">
+    <div class="card-title">Zile trecute fără pontaj</div>
+    {% if gaps %}
+    <ul class="attention">
+      {% for emp, n, last in gaps %}
+      <li><span>{{ emp.name }}</span><span class="muted">{{ n }} zile · ultima {{ last|date:'d.m' }}</span></li>
+      {% endfor %}
+    </ul>
+    {% else %}<p class="muted">Toate zilele trecute sunt completate.</p>{% endif %}
+  </div>
+  <div class="card card-pad">
+    <div class="card-title">Concedii neaprobate</div>
+    {% if pending_co %}
+    <ul class="attention">
+      {% for e in pending_co %}
+      <li><span>{{ e.employee.name }}</span><span class="muted">{{ e.day|date:'D d.m.Y' }}</span></li>
+      {% endfor %}
+    </ul>
+    {% else %}<p class="muted">Niciun concediu în așteptare.</p>{% endif %}
+  </div>
+</div>
+
+<div class="card">
+  <table class="list">
+    <thead>
+      <tr>
+        <th class="{% if sort == 'name' %}sorted{% endif %}"><a href="{% qs sort='name' %}">Angajat</a></th>
+        <th class="hide-sm">Secție</th>
+        <th class="{% if sort == 'hours' %}sorted{% endif %}"><a href="{% qs sort=None %}">Ore</a></th>
+        <th class="num {% if sort == 'worked' %}sorted{% endif %} hide-sm"><a href="{% qs sort='worked' %}">Zile lucrate</a></th>
+        <th class="num {% if sort == 'sp' %}sorted{% endif %}"><a href="{% qs sort='sp' %}">SP</a></th>
+        <th class="num {% if sort == 'co' %}sorted{% endif %}"><a href="{% qs sort='co' %}">CO</a></th>
+        <th class="num">CM</th>
+        <th class="num">LFP</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in table %}
+      <tr>
+        <td><b>{{ r.employee.name }}</b></td>
+        <td class="hide-sm"><span class="dot" style="background:{{ r.employee.section.color }}"></span> {{ r.employee.section.label }}</td>
+        <td><div style="display:flex;align-items:center;gap:10px"><span style="min-width:30px;font-weight:650">{{ r.stats.hours }}</span><div class="inline-bar hide-sm" style="flex:1"><span style="width:{{ r.stats.hours|pct:max_emp }}%"></span></div></div></td>
+        <td class="num hide-sm">{{ r.stats.worked }}</td>
+        <td class="num">{{ r.stats.sp|num }}</td>
+        <td class="num">{{ r.stats.co|num }}</td>
+        <td class="num">{{ r.stats.cm|num }}</td>
+        <td class="num">{{ r.stats.lfp|num }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

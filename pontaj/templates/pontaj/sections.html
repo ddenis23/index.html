@@ -1,0 +1,44 @@
+{% extends 'pontaj/base.html' %}
+{% load pontaj_tags %}
+{% block title %}Secții{% endblock %}
+{% block mobile_title %}Secții{% endblock %}
+{% block content %}
+<div class="page-head"><div class="page-title">Secții</div></div>
+<div class="stats-grid" style="grid-template-columns:1fr 1fr">
+  <div class="card">
+    <table class="list">
+      <thead><tr><th>Secție</th><th class="num">Angajați</th><th></th></tr></thead>
+      <tbody>
+        {% for s in sections %}
+        <tr>
+          <td><span class="dot" style="background:{{ s.color }}"></span> &nbsp;{{ s.label }}</td>
+          <td class="num">{{ s.n }}</td>
+          <td class="actions">
+            <a class="btn sm ghost" href="{% url 'section_edit' s.id %}">Editează</a>
+            {% if not s.n %}
+            <form method="post" action="{% url 'section_delete' s.id %}" style="display:inline">{% csrf_token %}<button class="btn sm danger">Șterge</button></form>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <form method="post" class="card card-pad" action="{% if editing %}{% url 'section_edit' editing.id %}{% else %}{% url 'sections' %}{% endif %}">
+    {% csrf_token %}
+    <div class="card-title">{% if editing %}Editează {{ editing.label }}{% else %}Secție nouă{% endif %}</div>
+    {% include 'pontaj/_field.html' with field=form.label %}
+    <div class="field">
+      <span class="field-label">Culoare</span>
+      <div class="swatches">
+        {% for r in form.palette %}<label>{{ r.tag }}<span class="swatch" style="background:{{ r.choice_label }}"></span></label>{% endfor %}
+      </div>
+      {{ form.palette.errors }}
+    </div>
+    <div class="form-actions">
+      <button class="btn primary">Salvează</button>
+      {% if editing %}<a class="btn ghost" href="{% url 'sections' %}">Anulează</a>{% endif %}
+    </div>
+  </form>
+</div>
+{% endblock %}

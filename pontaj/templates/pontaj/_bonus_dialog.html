@@ -1,0 +1,29 @@
+{% load pontaj_tags %}
+<div class="dlg-head">
+  <div>
+    <div class="dlg-title">Bonus vară{% if employee %} · {{ employee.name }}{% endif %}</div>
+    <div class="dlg-sub">{{ month_label }}{% if not employee %} · toți angajații activi{% endif %}</div>
+  </div>
+  <button class="btn icon ghost dlg-close" data-close aria-label="Închide">{% icon 'x' %}</button>
+</div>
+<form class="dlg-body" method="post" action="{% url 'bonus' %}">
+  {% csrf_token %}
+  <input type="hidden" name="luna" value="{{ month|date:'Y-m' }}">
+  <input type="hidden" name="tura" value="{{ shift }}">
+  {% if employee %}<input type="hidden" name="emp" value="{{ employee.id }}">{% endif %}
+  <p class="muted small" style="margin-bottom:12px">
+    {% if employee %}{% if current %}Bonus curent: <b>{{ current.code }}</b>{% else %}Fără bonus în luna asta.{% endif %}
+    {% else %}Se aplică tuturor angajaților activi în {{ month_label }} și înlocuiește bonusurile existente.{% endif %}
+  </p>
+  <div class="pick-grid">
+    {% for code, label in codes %}
+      <button class="pick c-{% if code == 'SP' %}sp{% elif code == 'SP0.5' %}sp05{% else %}spp{% endif %}{% if current.code == code %} current{% endif %}"
+              name="code" value="{{ code }}">{{ label }}</button>
+    {% endfor %}
+  </div>
+  {% if current or not employee and has_any %}
+  <div class="dlg-foot" style="margin-top:14px">
+    <button class="btn danger block" name="code" value="">{% if employee %}Scoate bonusul{% else %}Șterge bonusul de la toți{% endif %}</button>
+  </div>
+  {% endif %}
+</form>

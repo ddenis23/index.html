@@ -1,0 +1,13 @@
+{% extends 'pontaj/base.html' %}
+{% block title %}Confirmare{% endblock %}
+{% block content %}
+<form method="post" class="card card-pad form">
+  {% csrf_token %}
+  <div class="page-title" style="display:block;margin-bottom:8px">{{ title }}</div>
+  <p class="muted">{{ text }}</p>
+  <div class="form-actions">
+    <button class="btn danger">Da, șterge</button>
+    <a class="btn ghost" href="{% url back %}">Anulează</a>
+  </div>
+</form>
+{% endblock %}

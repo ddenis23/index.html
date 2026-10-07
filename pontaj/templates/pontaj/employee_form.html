@@ -1,0 +1,34 @@
+{% extends 'pontaj/base.html' %}
+{% load pontaj_tags %}
+{% block title %}{% if employee %}{{ employee.name }}{% else %}Angajat nou{% endif %}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <a class="btn icon ghost" href="{% url 'employees' %}" aria-label="Înapoi">{% icon 'left' %}</a>
+  <div class="page-title" style="display:block">{% if employee %}{{ employee.name }}{% else %}Angajat nou{% endif %}</div>
+</div>
+<form method="post" class="card card-pad form" novalidate>
+  {% csrf_token %}
+  {% include 'pontaj/_field.html' with field=form.name %}
+  {% include 'pontaj/_field.html' with field=form.section %}
+  {% include 'pontaj/_field.html' with field=form.shift %}
+  {% include 'pontaj/_field.html' with field=form.start_from %}
+  {% if form.active %}
+    {% include 'pontaj/_field.html' with field=form.active %}
+    <div id="inactive-wrap">{% include 'pontaj/_field.html' with field=form.inactive_from %}</div>
+  {% endif %}
+  <div class="form-actions">
+    <button class="btn primary">Salvează</button>
+    <a class="btn ghost" href="{% url 'employees' %}">Anulează</a>
+    {% if employee %}<span class="spacer"></span><a class="btn danger" href="{% url 'employee_delete' employee.id %}">Șterge</a>{% endif %}
+  </div>
+</form>
+{% if form.active %}
+<script>
+  (() => {
+    const box = document.getElementById('id_active'), wrap = document.getElementById('inactive-wrap');
+    const sync = () => { wrap.style.display = box.checked ? 'none' : ''; };
+    box.addEventListener('change', sync); sync();
+  })();
+</script>
+{% endif %}
+{% endblock %}

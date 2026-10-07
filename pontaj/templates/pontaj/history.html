@@ -1,0 +1,68 @@
+{% extends 'pontaj/base.html' %}
+{% load pontaj_tags %}
+{% block title %}Istoric{% endblock %}
+{% block mobile_title %}Istoric{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <div class="page-title">Istoric modificări</div>
+    <div class="page-sub">{{ page.paginator.count }} înregistrări{% if f.user or f.target or f.emp or f.q or f.from or f.to or f.action %} filtrate{% endif %}</div>
+  </div>
+</div>
+
+{% if activity %}
+<div class="chips">
+  <span class="muted small" style="align-self:center">Ultimele 30 de zile:</span>
+  {% for a in activity %}<a class="chip" href="?user={{ a.username|urlencode }}">{{ a.username }} <b>{{ a.n }}</b></a>{% endfor %}
+</div>
+{% endif %}
+
+<form class="filters" method="get">
+  <div><label>Cine</label>
+    <select class="input" name="user"><option value="">Toți</option>{% for u in usernames %}<option{% if u == f.user %} selected{% endif %}>{{ u }}</option>{% endfor %}</select></div>
+  <div><label>Ce</label>
+    <select class="input" name="target"><option value="">Tot</option>{% for t in targets %}<option{% if t == f.target %} selected{% endif %}>{{ t }}</option>{% endfor %}</select></div>
+  <div><label>Angajat</label>
+    <select class="input" name="emp"><option value="">Toți</option>{% for e in employees %}<option value="{{ e.id }}"{% if f.emp == e.id|stringformat:'s' %} selected{% endif %}>{{ e.name }}</option>{% endfor %}</select></div>
+  <div><label>De la</label><input class="input" type="date" name="from" value="{{ f.from }}"></div>
+  <div><label>Până la</label><input class="input" type="date" name="to" value="{{ f.to }}"></div>
+  <div><label>Caută</label><input class="input" type="search" name="q" value="{{ f.q }}" placeholder="ex: 12.10"></div>
+  <div style="display:flex;gap:6px">
+    <button class="btn primary">Filtrează</button>
+    <a class="btn ghost" href="{% url 'history' %}">Reset</a>
+  </div>
+</form>
+<label class="check small" style="margin:-4px 0 12px">
+  <input type="checkbox" onchange="location.search = new URLSearchParams({...Object.fromEntries(new URLSearchParams(location.search)), logins: this.checked ? 1 : ''}).toString()" {% if show_logins %}checked{% endif %}>
+  Arată și autentificările
+</label>
+
+<div class="card">
+  <table class="list">
+    <thead><tr><th>Când</th><th>Cine</th><th>Acțiune</th><th>Detalii</th><th class="hide-sm">Modificare</th></tr></thead>
+    <tbody>
+    {% for e in page %}
+      <tr>
+        <td class="muted" style="white-space:nowrap">{{ e.when|date:'d.m.Y' }}<div class="small">{{ e.when|date:'H:i:s' }}</div></td>
+        <td><div class="who"><span class="avatar">{{ e.username|slice:":2"|upper }}</span>{{ e.username }}</div></td>
+        <td><span class="act {{ e.action }}">{{ e.get_action_display }}</span><div class="muted small">{{ e.target }}</div></td>
+        <td>{{ e.summary }}
+          <div class="change" style="display:none" data-sm>{% if e.before %}<del>{{ e.before }}</del>{% endif %}{% if e.before and e.after %} → {% endif %}{% if e.after %}<ins>{{ e.after }}</ins>{% endif %}</div>
+        </td>
+        <td class="change hide-sm">{% if e.before %}<del>{{ e.before }}</del>{% endif %}{% if e.before and e.after %} → {% endif %}{% if e.after %}<ins>{{ e.after }}</ins>{% endif %}</td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="5" class="muted" style="text-align:center;padding:40px">Nicio înregistrare.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% if page.paginator.num_pages > 1 %}
+  <div class="pager">
+    {% if page.has_previous %}<a class="btn sm" href="?{{ query }}&page={{ page.previous_page_number }}">{% icon 'left' 14 %} Mai noi</a>{% else %}<span></span>{% endif %}
+    <span class="muted small">Pagina {{ page.number }} din {{ page.paginator.num_pages }}</span>
+    {% if page.has_next %}<a class="btn sm" href="?{{ query }}&page={{ page.next_page_number }}">Mai vechi {% icon 'right' 14 %}</a>{% else %}<span></span>{% endif %}
+  </div>
+  {% endif %}
+</div>
+<style>@media (max-width:860px){[data-sm]{display:block!important;margin-top:4px}}</style>
+{% endblock %}

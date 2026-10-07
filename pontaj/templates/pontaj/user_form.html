@@ -1,0 +1,17 @@
+{% extends 'pontaj/base.html' %}
+{% load pontaj_tags %}
+{% block title %}{% if edited %}{{ edited.username }}{% else %}Cont nou{% endif %}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <a class="btn icon ghost" href="{% url 'users' %}" aria-label="Înapoi">{% icon 'left' %}</a>
+  <div class="page-title" style="display:block">{% if edited %}{{ edited.username }}{% else %}Cont nou{% endif %}</div>
+</div>
+<form method="post" class="card card-pad form" novalidate autocomplete="off">
+  {% csrf_token %}
+  {% for field in form %}{% include 'pontaj/_field.html' %}{% endfor %}
+  <div class="form-actions">
+    <button class="btn primary">Salvează</button>
+    <a class="btn ghost" href="{% url 'users' %}">Anulează</a>
+  </div>
+</form>
+{% endblock %}

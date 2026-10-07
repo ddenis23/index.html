@@ -1,0 +1,29 @@
+{% extends 'pontaj/base.html' %}
+{% load pontaj_tags %}
+{% block title %}Conturi{% endblock %}
+{% block mobile_title %}Conturi{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <div class="page-title">Conturi</div>
+    <div class="page-sub">{% if is_superadmin %}Fiecare om cu cont propriu = istoric clar despre cine ce a modificat.{% else %}Conturile de vizualizare pentru angajați.{% endif %}</div>
+  </div>
+  <span class="spacer"></span>
+  <a class="btn primary" href="{% url 'user_new' %}">{% icon 'plus' 16 %} Cont nou</a>
+</div>
+<div class="card">
+  <table class="list">
+    <thead><tr><th>Utilizator</th><th>Rol</th><th class="hide-sm">Ultima autentificare</th><th></th></tr></thead>
+    <tbody>
+    {% for u, role in users %}
+      <tr{% if not u.is_active %} style="opacity:.5"{% endif %}>
+        <td><div class="who"><span class="avatar">{{ u.username|slice:":2"|upper }}</span><div>{{ u.username }}{% if u.first_name %}<div class="muted small" style="font-weight:400">{{ u.get_full_name }}</div>{% endif %}</div></div></td>
+        <td><span class="act {% if role == 'superadmin' %}delete{% elif role == 'admin' %}update{% else %}login{% endif %}">{{ role|capfirst }}</span>{% if not u.is_active %} <span class="muted small">dezactivat</span>{% endif %}</td>
+        <td class="hide-sm muted">{{ u.last_login|date:'d.m.Y H:i'|default:'niciodată' }}</td>
+        <td class="actions"><a class="btn sm ghost" href="{% url 'user_edit' u.id %}">Editează</a></td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

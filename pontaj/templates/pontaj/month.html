@@ -1,0 +1,51 @@
+{% extends 'pontaj/base.html' %}
+{% load pontaj_tags %}
+{% block title %}{{ title }}{% endblock %}
+{% block mobile_title %}Pontaj lunar{% endblock %}
+{% block content %}
+<div class="toolbar">
+  <div class="monthnav">
+    <a class="btn icon" href="{% qs luna=prev|date:'Y-m' %}" aria-label="Luna anterioară">{% icon 'left' %}</a>
+    <span class="label">{{ title }}</span>
+    <a class="btn icon" href="{% qs luna=next|date:'Y-m' %}" aria-label="Luna următoare">{% icon 'right' %}</a>
+    {% if not is_current %}<a class="btn ghost sm" href="{% qs luna=None %}">Luna curentă</a>{% endif %}
+  </div>
+  <div class="seg">
+    <a class="{% if not shift %}on{% endif %}" href="{% qs tura=None %}">Toate</a>
+    <a class="{% if shift == 1 %}on{% endif %}" href="{% qs tura=1 %}">Tura 1</a>
+    <a class="{% if shift == 2 %}on{% endif %}" href="{% qs tura=2 %}">Tura 2</a>
+  </div>
+  <span class="spacer"></span>
+  {% if can_edit %}
+    <a class="btn" href="{% url 'bonus' %}?luna={{ month|date:'Y-m' }}&tura={{ shift }}" data-dialog>{% icon 'sun' 16 %} Bonus vară</a>
+    <a class="btn" href="{% url 'export_month' %}?luna={{ month|date:'Y-m' }}">{% icon 'download' 16 %} XLSX</a>
+  {% endif %}
+</div>
+
+{% include 'pontaj/_schedule_tools.html' %}
+
+<div class="gridwrap">
+  <table class="grid month" id="grid" data-mode="month" data-tura="{{ shift }}" data-cell-url="{% url 'cell' %}"
+         {% if can_edit %}data-editable="1"{% endif %}>
+    <thead>
+      <tr>
+        <th class="name">Angajat</th>
+        {% for h in grid.head %}
+          <th class="{% if h.we %}we{% endif %}{% if h.today %} today{% endif %}"><span class="d">{{ h.day.day }}</span>{{ h.short }}</th>
+        {% endfor %}
+        <th class="sum first">Vară</th><th class="sum">Ore</th><th class="sum sp">SP</th>
+        <th class="sum co">CO</th><th class="sum cm">CM</th><th class="sum lfp">LFP</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for shift_no, rows in grid.groups %}
+        <tr class="group"><td colspan="{{ grid.days|length|add:7 }}">Tura {{ shift_no }} · {{ rows|length }} angajați</td></tr>
+        {% for row in rows %}{% include 'pontaj/_row.html' %}{% endfor %}
+      {% empty %}
+        <tr><td colspan="{{ grid.days|length|add:7 }}" class="muted" style="padding:40px;text-align:center">Niciun angajat activ în această lună.</td></tr>
+      {% endfor %}
+    </tbody>
+    <tfoot>{% include 'pontaj/_totals.html' %}</tfoot>
+  </table>
+</div>
+{% endblock %}

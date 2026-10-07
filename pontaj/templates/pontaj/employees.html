@@ -1,0 +1,62 @@
+{% extends 'pontaj/base.html' %}
+{% load pontaj_tags %}
+{% block title %}Angajați{% endblock %}
+{% block mobile_title %}Angajați{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <div class="page-title">Angajați</div>
+    <div class="page-sub">{{ count }} activi · statistici pentru {{ month_name }}</div>
+  </div>
+  <span class="spacer"></span>
+  <div class="seg">
+    <a class="{% if not shift %}on{% endif %}" href="{% qs tura=None %}">Toate</a>
+    <a class="{% if shift == '1' %}on{% endif %}" href="{% qs tura=1 %}">Tura 1</a>
+    <a class="{% if shift == '2' %}on{% endif %}" href="{% qs tura=2 %}">Tura 2</a>
+  </div>
+  {% if can_edit %}<a class="btn primary" href="{% url 'employee_new' %}">{% icon 'plus' 16 %} Angajat nou</a>{% endif %}
+</div>
+
+{% for sec, emps in sections %}
+  <div class="sec-head"><span class="dot" style="background:{{ sec.color }}"></span>{{ sec.label }} <span class="muted small">{{ emps|length }}</span></div>
+  <div class="emp-grid">
+    {% for e, row in emps %}
+      {% if can_edit %}<a class="emp" href="{% url 'employee_edit' e.id %}">{% else %}<div class="emp">{% endif %}
+        <span class="emp-mono" style="background:{{ sec.bg }};color:{{ sec.color }}">{{ e.initials }}</span>
+        <div style="min-width:0">
+          <div class="emp-name">{{ e.name }}</div>
+          <div class="emp-meta">Tura {{ e.shift }}{% if e.start_from > today %} · începe {{ e.start_from|date:'d.m.Y' }}{% endif %}{% if e.inactive_from %} · pleacă {{ e.inactive_from|date:'d.m.Y' }}{% endif %}</div>
+          {% if row %}
+          <div class="emp-stats">
+            <span><b>{{ row.stats.hours|num }}</b> ore</span>
+            {% if row.stats.sp %}<span><b>{{ row.stats.sp|num }}</b> SP</span>{% endif %}
+            {% if row.stats.co %}<span><b>{{ row.stats.co }}</b> CO</span>{% endif %}
+            {% if row.stats.cm %}<span><b>{{ row.stats.cm }}</b> CM</span>{% endif %}
+          </div>
+          {% endif %}
+        </div>
+        {% if can_edit %}<span class="emp-chev">{% icon 'chev' 16 %}</span>{% endif %}
+      {% if can_edit %}</a>{% else %}</div>{% endif %}
+    {% endfor %}
+  </div>
+{% empty %}
+  <div class="card card-pad muted" style="text-align:center;padding:40px">Niciun angajat activ.</div>
+{% endfor %}
+
+{% if inactive %}
+<details class="inactive">
+  <summary>Inactivi ({{ inactive|length }})</summary>
+  <div class="emp-grid">
+    {% for e in inactive %}
+      {% if can_edit %}<a class="emp" href="{% url 'employee_edit' e.id %}">{% else %}<div class="emp">{% endif %}
+        <span class="emp-mono" style="background:{{ e.section.bg }};color:{{ e.section.color }}">{{ e.initials }}</span>
+        <div>
+          <div class="emp-name">{{ e.name }}</div>
+          <div class="emp-meta">{{ e.section.label }} · inactiv din {{ e.inactive_from|date:'d.m.Y' }}</div>
+        </div>
+      {% if can_edit %}</a>{% else %}</div>{% endif %}
+    {% endfor %}
+  </div>
+</details>
+{% endif %}
+{% endblock %}

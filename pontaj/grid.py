@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 
 from django.utils import timezone
 
-from .store import SP_VALUE, Code
+from .store import SP_VALUE, Code, Employee, Entry
 
 MONTHS = ['Ianuarie', 'Februarie', 'Martie', 'Aprilie', 'Mai', 'Iunie', 'Iulie',
           'August', 'Septembrie', 'Octombrie', 'Noiembrie', 'Decembrie']

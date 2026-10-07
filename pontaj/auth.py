@@ -67,7 +67,7 @@ def _session_user(request):
     username = request.session.get(SESSION_USER)
     if not username:
         return store.AnonymousUser()
-    user = store.get_user(username)
+    user = store.get_user_cached(username)
     if not user or not user.active or not hmac.compare_digest(request.session.get(SESSION_HASH, ''), _fingerprint(user)):
         request.session.flush()
         return store.AnonymousUser()

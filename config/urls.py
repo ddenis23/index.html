@@ -15,7 +15,7 @@ urlpatterns = [
     path('lunar/export/', reports.export_month, name='export_month'),
     path('saptamanal/', schedule.week_view, name='saptamanal'),
     path('saptamanal/export/', reports.export_week, name='export_week'),
-    path('pontaj/celula/', schedule.cell, name='cell'),
+    path('pontaj/salveaza/', schedule.save_cells, name='save_cells'),
     path('pontaj/bonus/', schedule.bonus, name='bonus'),
 
     path('angajati/', people.employee_list, name='employees'),

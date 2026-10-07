@@ -1,0 +1,9 @@
+{
+  "rules": {
+    "sectii":   { ".read": true, ".write": true },
+    "angajati": { ".read": true, ".write": true },
+    "pontaj":   { ".read": true, ".write": true },
+    "bonusuri": { ".read": true, ".write": true },
+    "setari":   { ".read": true, ".write": true }
+  }
+}

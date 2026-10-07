@@ -102,6 +102,27 @@ class Cell:
         return self.day.weekday() >= 5
 
     @property
+    def value(self):
+        """Valoarea curenta in formatul actiunilor din interfata (vezi app.js)."""
+        e = self.entry if self.active else None
+        if not e:
+            return ''
+        if e.is_interval:
+            return f'interval:{e.start_h}:{e.end_h}'
+        if e.code == Code.CO and e.approved is not None:
+            return f'code:CO:{int(e.approved)}'
+        return f'code:{e.code}'
+
+    @property
+    def past(self):
+        return self.day < today()
+
+    @property
+    def missing(self):
+        """Zi trecuta, activa, fara nimic completat."""
+        return self.active and not self.entry and self.day < today()
+
+    @property
     def css(self):
         if not self.active:
             return 'c-in'

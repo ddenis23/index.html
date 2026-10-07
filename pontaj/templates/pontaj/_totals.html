@@ -1,14 +1,14 @@
 {% load pontaj_tags %}<tr>
-  <td class="name">Total</td>
+  <th class="name" scope="row">Total</th>
   <td colspan="{{ grid.days|length }}"></td>
   {% if mode == 'month' %}
   <td class="sum first"></td>
-  <td class="sum">{{ grid.totals.hours|num }}</td>
-  <td class="sum sp">{{ grid.totals.sp|num }}</td>
-  <td class="sum co">{{ grid.totals.co|num }}</td>
-  <td class="sum cm">{{ grid.totals.cm|num }}</td>
-  <td class="sum lfp">{{ grid.totals.lfp|num }}</td>
+  <td class="sum" data-t="hours">{{ grid.totals.hours|num }}</td>
+  <td class="sum sp" data-t="sp">{{ grid.totals.sp|num }}</td>
+  <td class="sum co" data-t="co">{{ grid.totals.co|num }}</td>
+  <td class="sum cm" data-t="cm">{{ grid.totals.cm|num }}</td>
+  <td class="sum lfp" data-t="lfp">{{ grid.totals.lfp|num }}</td>
   {% else %}
-  <td class="sum first">{{ grid.totals.hours|num }}</td>
+  <td class="sum first" data-t="hours">{{ grid.totals.hours|num }}</td>
   {% endif %}
 </tr>

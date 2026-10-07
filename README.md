@@ -16,6 +16,22 @@ Recomandare: fiecare om care modifică programul primește **cont propriu** (din
 
 Conturile `admin` și `angajat` sunt create automat la prima pornire, cu **parolele actuale** din vechea aplicație.
 
+## Lucrul în orar
+
+Orarul funcționează ca un tabel Excel. Toate modificările apar imediat și se salvează în fundal.
+
+| Acțiune | Calculator | Telefon |
+|---|---|---|
+| Selectezi zile | click, tragi cu mouse-ul, <kbd>Shift</kbd>+click (interval), <kbd>Ctrl</kbd>+click (adaugi) | atingi fiecare zi |
+| Te muți | săgeți; <kbd>Shift</kbd>+săgeți extinde selecția | — |
+| Aplici | bara de jos sau o tastă: <kbd>1</kbd> 10–23 · <kbd>2</kbd> 10–18 · <kbd>O</kbd> OFF · <kbd>S</kbd> SP · <kbd>H</kbd> SP½ · <kbd>P</kbd> SP+ · <kbd>C</kbd> CO · <kbd>N</kbd> CO neaprobat · <kbd>M</kbd> CM · <kbd>L</kbd> LP · <kbd>F</kbd> LFP | bara de jos |
+| Alt interval | <kbd>Enter</kbd> sau dublu-click | „Alt interval” |
+| Golești | <kbd>Delete</kbd> | „Golește” |
+| Anulezi | <kbd>Ctrl</kbd>+<kbd>Z</kbd> sau „Anulează” din notificare | „Anulează” din notificare |
+| Copiezi / lipești | <kbd>Ctrl</kbd>+<kbd>C</kbd>, apoi click pe ziua de început și <kbd>Ctrl</kbd>+<kbd>V</kbd> | — |
+
+Punctul roșu din colțul unei zile = zi trecută necompletată.
+
 ## Deploy pe Render
 
 ### 1. Cheia Firebase (service account)
@@ -34,7 +50,11 @@ Conturile `admin` și `angajat` sunt create automat la prima pornire, cu **parol
 
 Site-ul vechi de pe Render rămâne neatins și funcționează în continuare.
 
-### 3. Trecerea pe site-ul nou
+### 3. Protejează conturile încă de acum
+
+Cât timp site-ul vechi mai e folosit, baza nu poate fi închisă complet. Poți totuși închide accesul public la conturi și la istoric. Firebase → *Realtime Database* → *Rules* → lipești conținutul din [`database.rules.transition.json`](database.rules.transition.json) → *Publish*. Site-ul vechi merge în continuare, pentru că folosește doar `sectii`, `angajati`, `pontaj`, `bonusuri` și `setari`.
+
+### 4. Trecerea pe site-ul nou
 
 1. Testați site-ul nou câteva zile. Ambele site-uri scriu în aceeași bază.
 2. Creați din *Conturi* câte un cont de admin pentru fiecare om care modifică programul.
@@ -75,7 +95,8 @@ Teste: `python manage.py test pontaj` (rulează pe o bază în memorie).
 ```
 config/              setări Django + URL-uri
 render.yaml          configurarea serviciului pe Render
-database.rules.json  regulile Firebase care închid accesul public
+database.rules.json  regulile Firebase finale (totul închis; doar serverul are acces)
+database.rules.transition.json  reguli pe perioada în care merg ambele site-uri
 pontaj/
   firebase.py        acces la Firebase (REST + service account; copie locală; memorie pentru teste)
   store.py           structura datelor în Firebase + citire/scriere

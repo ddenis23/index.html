@@ -1,26 +1,20 @@
-{% load pontaj_tags %}<tr data-emp="{{ row.employee.id }}">
-  <td class="name">{{ row.employee.name }}<small>{{ row.employee.section.label }}</small></td>
-  {% for c in row.cells %}
-  <td class="day{% if c.weekend %} we{% endif %}{% if c.is_today %} today{% endif %}">
-    <button type="button" class="c {{ c.css }}" data-emp="{{ row.employee.id }}" data-day="{{ c.day|date:'Y-m-d' }}"
-      {% if not c.active %}disabled title="Inactiv în această zi"{% endif %}
-      aria-label="{{ row.employee.name }} {{ c.day|date:'d.m' }}">{% if c.label %}{{ c.label }}{% if c.sub %}<small>{{ c.sub }}</small>{% endif %}{% endif %}</button>
-  </td>
-  {% endfor %}
+{% load pontaj_tags %}<tr data-emp="{{ row.employee.id }}" data-name="{{ row.employee.name }}" data-bonus="{{ row.bonus }}">
+  <th class="name" scope="row" title="{{ row.employee.name }} · {{ row.employee.section.label }}"><span class="dot" style="background:{{ row.employee.section.color }}"></span>{{ row.employee.name }}<small>{{ row.employee.section.label }}</small></th>
+  {% for c in row.cells %}<td class="d{% if c.weekend %} we{% endif %}{% if c.is_today %} now{% endif %}"><button type="button" class="c {{ c.css }}{% if c.missing %} miss{% endif %}" data-day="{{ c.day|date:'Y-m-d' }}" data-v="{{ c.value }}"{% if c.past %} data-past="1"{% endif %}{% if not c.active %} disabled{% endif %}>{% if c.label %}{{ c.label }}{% if c.sub %}<small>{{ c.sub }}</small>{% endif %}{% endif %}</button></td>{% endfor %}
   {% if mode == 'month' %}
   <td class="sum first">
     {% if can_edit %}
-      <button type="button" class="bonus-btn{% if row.bonus %} set c-spp{% endif %}"
+      <button type="button" class="bonus-btn{% if row.bonus %} set{% endif %}" title="Bonus vară"
         data-dialog="{% url 'bonus' %}?emp={{ row.employee.id }}&luna={{ row.cells.0.day|date:'Y-m' }}&tura={{ shift }}">{{ row.bonus_label|default:'+' }}</button>
-    {% elif row.bonus %}<span class="badge c-spp">{{ row.bonus_label }}</span>
-    {% else %}<span class="zero">—</span>{% endif %}
+    {% elif row.bonus %}<span class="bonus-btn set">{{ row.bonus_label }}</span>
+    {% endif %}
   </td>
-  <td class="sum">{{ row.stats.hours|num }}</td>
-  <td class="sum sp">{{ row.stats.sp|num }}</td>
-  <td class="sum co">{{ row.stats.co|num }}</td>
-  <td class="sum cm">{{ row.stats.cm|num }}</td>
-  <td class="sum lfp">{{ row.stats.lfp|num }}</td>
+  <td class="sum" data-k="hours">{{ row.stats.hours|num }}</td>
+  <td class="sum sp" data-k="sp">{{ row.stats.sp|num }}</td>
+  <td class="sum co" data-k="co">{{ row.stats.co|num }}</td>
+  <td class="sum cm" data-k="cm">{{ row.stats.cm|num }}</td>
+  <td class="sum lfp" data-k="lfp">{{ row.stats.lfp|num }}</td>
   {% else %}
-  <td class="sum first">{{ row.stats.hours|num }}</td>
+  <td class="sum first" data-k="hours">{{ row.stats.hours|num }}</td>
   {% endif %}
 </tr>

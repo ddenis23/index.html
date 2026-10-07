@@ -1,0 +1,44 @@
+{% load pontaj_tags %}
+<div class="legend">
+  {% for css, label in legend %}<span><i class="{{ css }}"></i>{{ label }}</span>{% endfor %}
+  <span><i style="position:relative;background:none;border:1px solid var(--line)"><b style="position:absolute;top:2px;right:2px;width:4px;height:4px;border-radius:50%;background:var(--danger)"></b></i>zi necompletată</span>
+  {% if can_edit %}
+  <span class="hint">Click sau trage pentru a selecta · <kbd>Shift</kbd>/<kbd>Ctrl</kbd>+click · <kbd>Ctrl</kbd><kbd>Z</kbd> anulează · <kbd>Ctrl</kbd><kbd>C</kbd>/<kbd>V</kbd> copiază</span>
+  {% else %}
+  <span class="hint">Click pe o zi pentru detalii</span>
+  {% endif %}
+</div>
+{% if can_edit %}
+<div class="actionbar" id="actionbar" hidden>
+  <span class="ab-count"><b id="ab-n">0</b> <span id="ab-unit">zile</span></span>
+  <div class="ab-actions">
+    {% for action, label, key, css in actions %}
+      {% if forloop.counter == 3 or forloop.counter == 7 %}<span class="ab-sep"></span>{% endif %}
+      <button type="button" class="ab-btn" data-act="{{ action }}" data-key="{{ key|lower }}"><i class="sw {{ css }}"></i>{{ label }}<kbd>{{ key }}</kbd></button>
+    {% endfor %}
+    <span class="ab-sep"></span>
+    <button type="button" class="ab-btn" data-act="custom">Alt interval<kbd>↵</kbd></button>
+    <button type="button" class="ab-btn danger" data-act="clear">Golește<kbd>Del</kbd></button>
+  </div>
+  <button type="button" class="ab-btn" data-act="deselect" aria-label="Renunță la selecție">{% icon 'x' 16 %}</button>
+</div>
+<div class="pop" id="pop-interval" hidden>
+  <div class="pop-title">Alt interval</div>
+  <div class="pop-sub" id="pop-interval-sub"></div>
+  <div class="pop-row">
+    <select id="pi-start" aria-label="De la">{% for h in start_hours %}<option value="{{ h }}">{{ h|stringformat:'02d' }}:00</option>{% endfor %}</select>
+    <span class="muted">–</span>
+    <select id="pi-end" aria-label="Până la">{% for h in end_hours %}<option value="{{ h }}">{{ h|stringformat:'02d' }}:00</option>{% endfor %}</select>
+  </div>
+  <div class="pop-row" style="justify-content:space-between;margin:0">
+    <span><span class="big" id="pi-hours">13</span> <span class="muted">ore</span></span>
+    <button type="button" class="btn primary" id="pi-apply">Aplică</button>
+  </div>
+</div>
+{% endif %}
+<div class="pop" id="pop-info" hidden>
+  <div class="pop-title" id="info-title"></div>
+  <div class="pop-sub" id="info-sub"></div>
+  <div class="big" id="info-value"></div>
+  <div class="muted small" id="info-note" style="margin-top:4px"></div>
+</div>

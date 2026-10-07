@@ -10,8 +10,12 @@ def client_ip(request):
 
 def log(request, action, target, summary, employee=None, before='', after=''):
     """Scrie in istoric cine a facut ce. `action`: create | update | delete | login | export."""
+    store.add_log(row(request, action, target, summary, employee, before, after))
+
+
+def row(request, action, target, summary, employee=None, before='', after=''):
     user = getattr(request, 'user', None)
-    store.add_log({
+    return {
         'when': timezone.now().isoformat(timespec='seconds'),
         'user': user.username if user and user.is_authenticated else 'anonim',
         'action': action,
@@ -22,4 +26,4 @@ def log(request, action, target, summary, employee=None, before='', after=''):
         'before': str(before or '')[:200] or None,
         'after': str(after or '')[:200] or None,
         'ip': client_ip(request),
-    })
+    }

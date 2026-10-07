@@ -15,6 +15,7 @@ Noduri noi:
 """
 
 import datetime as dt
+import itertools
 import random
 import string
 import time
@@ -183,6 +184,39 @@ def _as_dict(value):
 
 def load():
     raw_secs, raw_emps, raw_pontaj, raw_bonus = backend().get_many(['sectii', 'angajati', 'pontaj', 'bonusuri'])
+    data = _people(raw_secs, raw_emps)
+    _add_entries(data, raw_pontaj)
+    for month, per_emp in _as_dict(raw_bonus).items():
+        for eid, code in _as_dict(per_emp).items():
+            if code in SP_VALUE:
+                data.bonuses[(eid, month)] = code
+    return data
+
+
+def load_people():
+    """Doar sectiile si angajatii (fara pontaj) — pentru salvari rapide."""
+    return _people(*backend().get_many(['sectii', 'angajati']))
+
+
+def load_entries(emp_ids):
+    """Pontajul doar pentru angajatii dati: {(emp_id, data): Entry}."""
+    emp_ids = list(emp_ids)
+    data = Data()
+    raws = backend().get_many([f'pontaj/{eid}' for eid in emp_ids])
+    _add_entries(data, dict(zip(emp_ids, raws)))
+    return data.entries
+
+
+def _add_entries(data, raw_pontaj):
+    for eid, days in _as_dict(raw_pontaj).items():
+        for day, raw in _as_dict(days).items():
+            d = _date(day)
+            entry = Entry.from_firebase(eid, d, raw) if d else None
+            if entry:
+                data.entries[(eid, d)] = entry
+
+
+def _people(raw_secs, raw_emps):
     data = Data()
     for sid, s in _as_dict(raw_secs).items():
         if isinstance(s, dict):
@@ -203,25 +237,19 @@ def load():
             eid, (e.get('name') or '?').strip(), by_id.get(e.get('section'), FALLBACK_SECTION),
             2 if e.get('tura') == 2 else 1, start, inactive))
     data.employees.sort(key=lambda e: (order.get(e.section.id, 99), e.name))
-
-    for eid, days in _as_dict(raw_pontaj).items():
-        for day, raw in _as_dict(days).items():
-            d = _date(day)
-            entry = Entry.from_firebase(eid, d, raw) if d else None
-            if entry:
-                data.entries[(eid, d)] = entry
-
-    for month, per_emp in _as_dict(raw_bonus).items():
-        for eid, code in _as_dict(per_emp).items():
-            if code in SP_VALUE:
-                data.bonuses[(eid, month)] = code
     return data
 
 
 # ── Scrieri ──────────────────────────────────────────────
 
-def save_entry(emp_id, day, entry):
-    backend().set(f'pontaj/{emp_id}/{day:%Y-%m-%d}', entry.to_firebase() if entry else None)
+def entry_path(emp_id, day):
+    return f'pontaj/{emp_id}/{day:%Y-%m-%d}'
+
+
+def commit(updates):
+    """O singura scriere atomica, multi-path: {'pontaj/1/2026-10-05': {...} | None, 'istoric/<cheie>': {...}}."""
+    if updates:
+        backend().update('', updates)
 
 
 def save_bonuses(month_key, codes):
@@ -331,6 +359,21 @@ def list_users():
 
 def save_user(user):
     backend().set(f'utilizatori/{user.username}', user.to_firebase())
+    _user_cache.pop(user.username, None)
+
+
+# Contul e citit la fiecare cerere; il tinem cateva secunde in memorie ca paginile sa fie rapide.
+_user_cache = {}
+USER_CACHE_SECONDS = 20
+
+
+def get_user_cached(username):
+    hit = _user_cache.get(username)
+    if hit and hit[1] > time.monotonic():
+        return hit[0]
+    user = get_user(username)
+    _user_cache[username] = (user, time.monotonic() + USER_CACHE_SECONDS)
+    return user
 
 
 def legacy_passwords():
@@ -359,8 +402,19 @@ class LogEntry:
         return self.ACTIONS.get(self.action, self.action)
 
 
+_log_seq = itertools.count()
+
+
+def log_key():
+    """Chei cronologice (sortate ca text), ca istoricul sa poata fi scris in aceeasi tranzactie cu modificarea.
+
+    milisecunde + contor (ordinea in acelasi proces) + sufix aleator (unicitate intre procese).
+    """
+    return f'{int(time.time() * 1000):013d}{next(_log_seq) % 10000:04d}{"".join(random.choices(string.ascii_lowercase, k=3))}'
+
+
 def add_log(row):
-    backend().push('istoric', row)
+    backend().set(f'istoric/{log_key()}', row)
 
 
 def recent_logs(limit=3000):

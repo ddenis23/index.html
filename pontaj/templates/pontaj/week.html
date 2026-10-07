@@ -1,41 +1,36 @@
 {% extends 'pontaj/base.html' %}
 {% load pontaj_tags %}
 {% block title %}Săptămâna {{ title }}{% endblock %}
-{% block mobile_title %}Pontaj săptămânal{% endblock %}
 {% block content %}
 <div class="toolbar">
   <div class="monthnav">
-    <a class="btn icon" href="{% qs sapt=prev|date:'Y-m-d' %}" aria-label="Săptămâna anterioară">{% icon 'left' %}</a>
+    <a class="btn icon ghost" href="{% qs sapt=prev|date:'Y-m-d' %}" aria-label="Săptămâna anterioară">{% icon 'left' %}</a>
     <span class="label">{{ title }}</span>
-    <a class="btn icon" href="{% qs sapt=next|date:'Y-m-d' %}" aria-label="Săptămâna următoare">{% icon 'right' %}</a>
-    {% if not is_current %}<a class="btn ghost sm" href="{% qs sapt=None %}">Azi</a>{% endif %}
+    <a class="btn icon ghost" href="{% qs sapt=next|date:'Y-m-d' %}" aria-label="Săptămâna următoare">{% icon 'right' %}</a>
+    {% if not is_current %}<a class="btn sm ghost" href="{% qs sapt=None %}">Azi</a>{% endif %}
   </div>
   <div class="seg">
-    <a class="{% if not shift %}on{% endif %}" href="{% qs tura=None %}">Toate</a>
+    <a class="{% if not shift %}on{% endif %}" href="{% qs tura=None %}">Toți</a>
     <a class="{% if shift == 1 %}on{% endif %}" href="{% qs tura=1 %}">Tura 1</a>
     <a class="{% if shift == 2 %}on{% endif %}" href="{% qs tura=2 %}">Tura 2</a>
   </div>
   <span class="spacer"></span>
-  {% if can_edit %}<a class="btn" href="{% url 'export_week' %}?sapt={{ monday|date:'Y-m-d' }}">{% icon 'download' 16 %} XLSX</a>{% endif %}
+  {% if can_edit %}<a class="btn" href="{% url 'export_week' %}?sapt={{ monday|date:'Y-m-d' }}">{% icon 'download' 15 %} Excel</a>{% endif %}
 </div>
 
-{% include 'pontaj/_schedule_tools.html' %}
-
-<div class="gridwrap">
-  <table class="grid week" id="grid" data-mode="week" data-tura="{{ shift }}" data-cell-url="{% url 'cell' %}"
-         {% if can_edit %}data-editable="1"{% endif %}>
+<div class="sheet-wrap" tabindex="-1">
+  <table class="grid week{% if can_edit %} editable{% endif %}" id="grid" data-mode="week"
+         data-save-url="{% url 'save_cells' %}"{% if can_edit %} data-editable="1"{% endif %}>
     <thead>
       <tr>
-        <th class="name">Angajat</th>
-        {% for h in grid.head %}
-          <th class="{% if h.we %}we{% endif %}{% if h.today %} today{% endif %}"><span class="d">{{ h.day.day }}</span>{{ h.long }}</th>
-        {% endfor %}
+        <th class="name" scope="col">Angajat</th>
+        {% for h in grid.head %}<th class="{% if h.we %}we{% endif %}{% if h.today %} now{% endif %}" data-long="{{ h.long }}"><span class="d">{{ h.day.day }}</span>{{ h.long }}</th>{% endfor %}
         <th class="sum first">Ore</th>
       </tr>
     </thead>
     <tbody>
       {% for shift_no, rows in grid.groups %}
-        <tr class="group"><td colspan="9">Tura {{ shift_no }} · {{ rows|length }} angajați</td></tr>
+        <tr class="group"><th colspan="9">Tura {{ shift_no }} · {{ rows|length }}</th></tr>
         {% for row in rows %}{% include 'pontaj/_row.html' %}{% endfor %}
       {% empty %}
         <tr><td colspan="9" class="muted" style="padding:40px;text-align:center">Niciun angajat activ în această săptămână.</td></tr>
@@ -45,3 +40,4 @@
   </table>
 </div>
 {% endblock %}
+{% block overlays %}{% include 'pontaj/_sheet_extras.html' %}{% endblock %}

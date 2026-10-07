@@ -38,6 +38,7 @@ def _seed():
 
 class PontajTests(SimpleTestCase):
     def setUp(self):
+        store._user_cache.clear()
         self.db = MemoryBackend(_seed())
         use_backend(self.db)
 
@@ -49,8 +50,12 @@ class PontajTests(SimpleTestCase):
         r = self.client.post('/login/', {'username': username, 'password': PASS})
         self.assertEqual(r.status_code, 302, f'login {username} esuat')
 
-    def post_cell(self, action, day='2026-10-05', mode='month', emp='1'):
-        return self.client.post('/pontaj/celula/', {'emp': emp, 'day': day, 'mode': mode, 'action': action})
+    def save(self, *items):
+        return self.client.post('/pontaj/salveaza/', json.dumps({'items': [
+            {'emp': emp, 'day': day, 'action': action} for emp, day, action in items]}), content_type='application/json')
+
+    def post_cell(self, action, day='2026-10-05', emp='1'):
+        return self.save((emp, day, action))
 
     def logs(self, target):
         return [l for l in reversed(store.recent_logs()) if l.target == target]
@@ -80,8 +85,7 @@ class PontajTests(SimpleTestCase):
     def test_admin_edit_writes_firebase_format_and_is_logged(self):
         self.login('admin')
         r = self.post_cell('interval:10:23')
-        self.assertEqual(r.status_code, 200)
-        self.assertIn('data-emp', json.loads(r.content)['row'])
+        self.assertEqual(json.loads(r.content), {'saved': 1})
         self.assertEqual(self.db.get('pontaj/1/2026-10-05'), {'type': 'interval', 's': 10, 'e': 23})
         self.post_cell('code:CO:1')
         self.assertEqual(self.db.get('pontaj/1/2026-10-05'), {'type': 'code', 'code': 'CO', 'approved': True})
@@ -98,7 +102,22 @@ class PontajTests(SimpleTestCase):
         for action in ('code:CO', 'code:XX', 'interval:10', 'interval:a:b', 'interval:10:10', 'nimic'):
             self.assertEqual(self.post_cell(action).status_code, 400, action)
         self.assertEqual(self.post_cell('code:OFF', day='2025-12-31').status_code, 400)  # inainte de start
-        self.assertEqual(self.post_cell('code:OFF', emp='nu-exista').status_code, 404)
+        self.assertEqual(self.post_cell('code:OFF', emp='nu-exista').status_code, 400)
+
+    def test_batch_is_all_or_nothing_and_skips_unchanged(self):
+        self.login('admin')
+        r = self.save(('1', '2026-10-06', 'code:OFF'), ('1', '2025-01-01', 'code:OFF'))  # a doua e blocata
+        self.assertEqual(r.status_code, 400)
+        self.assertIsNone(self.db.get('pontaj/1/2026-10-06'))
+        r = self.save(('1', '2026-10-01', 'interval:10:23'), ('1', '2026-10-06', 'code:OFF'), ('1', '2026-10-07', 'code:OFF'))
+        self.assertEqual(json.loads(r.content), {'saved': 2})  # 01.10 era deja 10-23
+        self.assertEqual(len(self.logs('pontaj')), 2)
+        self.assertEqual(self.save(*[('1', f'2026-11-{d:02d}', 'code:OFF') for d in range(1, 31)] * 20).status_code, 400)
+
+    def test_page_has_cell_values_for_editor(self):
+        self.login('admin')
+        html = self.client.get('/lunar/?luna=2026-10').content.decode()
+        self.assertIn('data-day="2026-10-01" data-v="interval:10:23"', html)
 
     def test_history_only_for_superadmin(self):
         self.login('admin')
@@ -165,7 +184,7 @@ class PontajTests(SimpleTestCase):
         self.post_cell('interval:10:18')
         for url in ('/lunar/', '/saptamanal/?sapt=2026-10-05', '/angajati/', '/sectii/', '/sectii/CALD/',
                     '/conturi/', '/conturi/admin/', '/statistici/?luna=2026-10', '/istoric/', '/cont/parola/',
-                    '/pontaj/celula/?emp=1&day=2026-10-05&mode=month', '/pontaj/bonus/?luna=2026-10&emp=1'):
+                    '/pontaj/bonus/?luna=2026-10&emp=1'):
             self.assertEqual(self.client.get(url).status_code, 200, url)
         for url in ('/lunar/export/?luna=2026-10', '/saptamanal/export/?sapt=2026-10-05'):
             r = self.client.get(url)

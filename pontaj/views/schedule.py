@@ -1,26 +1,27 @@
 import datetime as dt
+import json
 
 from django.http import Http404, HttpResponseBadRequest, JsonResponse
 from django.shortcuts import redirect, render
-from django.template.loader import render_to_string
-from django.views.decorators.http import require_http_methods
+from django.views.decorators.http import require_http_methods, require_POST
 
+from .. import audit, store
 from .. import grid as g
-from .. import store
 from ..audit import log
 from ..roles import admin_required, can_edit
 from ..store import SP_VALUE, Code, Entry
 
-BRUSHES = [
-    ('interval:10:23', '10–23', 'c-hrs'), ('interval:10:18', '10–18', 'c-hrs'),
-    ('code:OFF', 'OFF', 'c-off'), ('code:SP', 'SP', 'c-sp'), ('code:SP0.5', 'SP½', 'c-sp05'),
-    ('code:SP+', 'SP+', 'c-spp'), ('code:CO:1', 'CO ✓', 'c-co'), ('code:CO:0', 'CO ✗', 'c-con'),
-    ('code:CM', 'CM', 'c-cm'), ('code:LP', 'LP', 'c-lp'), ('code:LFP', 'LFP', 'c-lfp'),
+# Bara de actiuni pentru zilele selectate: (actiune, eticheta, tasta, clasa).
+# Tastele sunt interpretate in app.js.
+ACTIONS = [
+    ('interval:10:23', '10–23', '1', 'c-hrs'), ('interval:10:18', '10–18', '2', 'c-hrs'),
+    ('code:OFF', 'OFF', 'O', 'c-off'), ('code:SP', 'SP', 'S', 'c-sp'), ('code:SP0.5', 'SP½', 'H', 'c-sp05'),
+    ('code:SP+', 'SP+', 'P', 'c-spp'), ('code:CO:1', 'CO', 'C', 'c-co'), ('code:CO:0', 'CO neaprobat', 'N', 'c-con'),
+    ('code:CM', 'CM', 'M', 'c-cm'), ('code:LP', 'LP', 'L', 'c-lp'), ('code:LFP', 'LFP', 'F', 'c-lfp'),
 ]
 LEGEND = [
-    ('c-hrs', 'ore'), ('c-sp', 'SP'), ('c-sp05', 'SP½'), ('c-spp', 'SP+'), ('c-co', 'CO aprobat'),
-    ('c-con', 'CO neaprobat'), ('c-cm', 'CM'), ('c-off', 'OFF'), ('c-lp', 'LP'), ('c-lfp', 'LFP'),
-    ('c-in', 'inactiv'),
+    ('c-co', 'CO concediu'), ('c-con', 'CO neaprobat'), ('c-cm', 'CM medical'), ('c-lp', 'LP liber plătit'),
+    ('c-lfp', 'LFP fără plată'), ('c-in', 'inactiv'),
 ]
 
 
@@ -43,7 +44,8 @@ def shift_month(first, delta):
 
 
 def _schedule_ctx(request, shift):
-    return {'shift': shift, 'brushes': BRUSHES, 'legend': LEGEND, 'can_edit': can_edit(request.user)}
+    return {'shift': shift, 'actions': ACTIONS, 'legend': LEGEND, 'can_edit': can_edit(request.user),
+            'start_hours': g.START_HOURS, 'end_hours': g.END_HOURS}
 
 
 def month_view(request):
@@ -82,26 +84,8 @@ def week_view(request):
     })
 
 
-def _view_days(mode, day):
-    if mode == 'week':
-        return g.week_days(g.monday_of(day))
-    return g.month_days(day.year, day.month)
-
-
-def _cell_payload(request, data, employee, day, mode, shift):
-    """HTML-ul nou pentru randul angajatului si pentru randul de total."""
-    grid = g.build_grid(data, _view_days(mode, day), shift, with_bonus=(mode == 'month'))
-    row = next((r for r in grid.rows if r.employee.id == employee.id), None)
-    ctx = {'grid': grid, 'mode': mode, 'can_edit': True, 'shift': shift}
-    return {
-        'row': render_to_string('pontaj/_row.html', {**ctx, 'row': row}, request) if row else '',
-        'totals': render_to_string('pontaj/_totals.html', ctx, request),
-        'emp': employee.id,
-    }
-
-
-def apply_action(entry, employee, day, action):
-    """Aplica `action` ('clear' | 'interval:10:23' | 'code:SP' | 'code:CO:1').
+def apply_action(employee, day, action):
+    """Interpreteaza `action` ('clear' | 'interval:10:23' | 'code:SP' | 'code:CO:1').
 
     Intoarce intrarea noua sau None pentru stergere; ValueError daca e invalida.
     """
@@ -129,50 +113,55 @@ def apply_action(entry, employee, day, action):
     raise ValueError('Actiune necunoscuta')
 
 
-@require_http_methods(['GET', 'POST'])
-def cell(request):
-    params = request.POST if request.method == 'POST' else request.GET
-    data = store.load()
-    employee = data.employee(params.get('emp', ''))
-    if not employee:
-        raise Http404
+MAX_BATCH = 500
+
+
+@admin_required
+@require_POST
+def save_cells(request):
+    """Salveaza mai multe zile deodata: {"items": [{"emp", "day", "action"}, ...]}.
+
+    Totul se valideaza inainte; daca o zi e invalida nu se salveaza nimic.
+    Pontajul si istoricul se scriu intr-o singura operatie atomica in Firebase.
+    """
     try:
-        day = dt.date.fromisoformat(params.get('day', ''))
-    except ValueError:
-        return HttpResponseBadRequest('Data invalida')
-    mode = 'week' if params.get('mode') == 'week' else 'month'
-    entry = data.entries.get((employee.id, day))
+        raw_items = json.loads(request.body)['items']
+        if not isinstance(raw_items, list) or not 0 < len(raw_items) <= MAX_BATCH:
+            raise ValueError
+        items = [(str(i['emp']), dt.date.fromisoformat(i['day']), str(i['action'])) for i in raw_items]
+    except (ValueError, KeyError, TypeError):
+        return JsonResponse({'error': 'Cerere invalida'}, status=400)
 
-    if request.method == 'GET':
-        return render(request, 'pontaj/_cell_dialog.html', {
-            'employee': employee, 'day': day, 'entry': entry, 'mode': mode,
-            'day_name': g.DAY_LONG[day.weekday()], 'month_name': g.MONTHS[day.month - 1],
-            'locked': employee.lock_reason(day),
-            'presets': g.PRESETS, 'start_hours': g.START_HOURS, 'end_hours': g.END_HOURS,
-            'can_edit': can_edit(request.user),
-        })
+    people = store.load_people()
+    employees = {e.id: e for e in people.employees}
+    parsed = {}
+    for emp_id, day, action in items:
+        employee = employees.get(emp_id)
+        if not employee:
+            return JsonResponse({'error': 'Angajat inexistent'}, status=400)
+        if reason := employee.lock_reason(day):
+            return JsonResponse({'error': f'{employee.name}: {reason}'}, status=400)
+        try:
+            parsed[(emp_id, day)] = (employee, apply_action(employee, day, action))
+        except ValueError as exc:
+            return JsonResponse({'error': str(exc)}, status=400)
 
-    if not can_edit(request.user):
-        return JsonResponse({'error': 'Nu ai drept de editare'}, status=403)
-    if reason := employee.lock_reason(day):
-        return JsonResponse({'error': reason}, status=400)
-    try:
-        new = apply_action(entry, employee, day, params.get('action', ''))
-    except ValueError as exc:
-        return JsonResponse({'error': str(exc)}, status=400)
-
-    before = entry.describe() if entry else ''
-    after = new.describe() if new else ''
-    if before != after or (new and entry and new.to_firebase() != entry.to_firebase()):
-        store.save_entry(employee.id, day, new)
-        if new:
-            data.entries[(employee.id, day)] = new
-        else:
-            data.entries.pop((employee.id, day), None)
-        action = 'delete' if not after else 'create' if not before else 'update'
-        log(request, action, 'pontaj', f'{employee.name} · {day:%d.%m.%Y}',
-            employee=employee, before=before, after=after)
-    return JsonResponse(_cell_payload(request, data, employee, day, mode, parse_shift(request)))
+    current = store.load_entries({emp_id for emp_id, _ in parsed})
+    updates, logs = {}, []
+    for (emp_id, day), (employee, new) in parsed.items():
+        old = current.get((emp_id, day))
+        before = old.describe() if old else ''
+        after = new.describe() if new else ''
+        if (old.to_firebase() if old else None) == (new.to_firebase() if new else None):
+            continue
+        updates[store.entry_path(emp_id, day)] = new.to_firebase() if new else None
+        action = 'delete' if not new else 'create' if not old else 'update'
+        logs.append(audit.row(request, action, 'pontaj', f'{employee.name} · {day:%d.%m.%Y}',
+                              employee=employee, before=before, after=after))
+    for row in logs:
+        updates[f'istoric/{store.log_key()}'] = row
+    store.commit(updates)
+    return JsonResponse({'saved': len(logs)})
 
 
 @admin_required

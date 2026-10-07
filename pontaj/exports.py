@@ -134,9 +134,9 @@ def _save(wb):
     return buf.getvalue()
 
 
-def month_xlsx(year, month):
+def month_xlsx(data, year, month):
     days = g.month_days(year, month)
-    grid = g.build_grid(days, with_bonus=True)
+    grid = g.build_grid(data, days, with_bonus=True)
     name = f'{g.MONTHS[month - 1]} {year}'
     wb = Workbook()
     ws = wb.active
@@ -159,9 +159,9 @@ def month_xlsx(year, month):
     return _save(wb), f'Pontaj_{g.MONTHS[month - 1]}_{year}.xlsx'
 
 
-def week_xlsx(monday):
+def week_xlsx(data, monday):
     days = g.week_days(monday)
-    grid = g.build_grid(days)
+    grid = g.build_grid(data, days)
     label = g.week_label(days)
     wb = Workbook()
     ws = wb.active

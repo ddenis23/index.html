@@ -1,4 +1,4 @@
-"""Roluri: superadmin (is_superuser) > admin (is_staff) > angajat (vizualizare)."""
+"""Roluri: superadmin > admin > angajat (doar vizualizare)."""
 
 from functools import wraps
 
@@ -9,15 +9,11 @@ ROLE_LABELS = {SUPERADMIN: 'Superadmin', ADMIN: 'Admin', VIEWER: 'Angajat'}
 
 
 def role_of(user):
-    if user.is_superuser:
-        return SUPERADMIN
-    if user.is_staff:
-        return ADMIN
-    return VIEWER
+    return getattr(user, 'role', VIEWER)
 
 
 def can_edit(user):
-    return user.is_authenticated and (user.is_staff or user.is_superuser)
+    return user.is_authenticated and user.is_staff
 
 
 def _require(check):
@@ -32,4 +28,4 @@ def _require(check):
 
 
 admin_required = _require(can_edit)
-superadmin_required = _require(lambda u: u.is_superuser)
+superadmin_required = _require(lambda u: u.is_authenticated and u.is_superuser)

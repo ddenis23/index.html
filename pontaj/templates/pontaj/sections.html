@@ -9,13 +9,13 @@
     <table class="list">
       <thead><tr><th>Secție</th><th class="num">Angajați</th><th></th></tr></thead>
       <tbody>
-        {% for s in sections %}
+        {% for s, n in sections %}
         <tr>
           <td><span class="dot" style="background:{{ s.color }}"></span> &nbsp;{{ s.label }}</td>
-          <td class="num">{{ s.n }}</td>
+          <td class="num">{{ n }}</td>
           <td class="actions">
             <a class="btn sm ghost" href="{% url 'section_edit' s.id %}">Editează</a>
-            {% if not s.n %}
+            {% if not n %}
             <form method="post" action="{% url 'section_delete' s.id %}" style="display:inline">{% csrf_token %}<button class="btn sm danger">Șterge</button></form>
             {% endif %}
           </td>

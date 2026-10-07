@@ -8,12 +8,14 @@
     <div class="page-title">Istoric modificări</div>
     <div class="page-sub">{{ page.paginator.count }} înregistrări{% if f.user or f.target or f.emp or f.q or f.from or f.to or f.action %} filtrate{% endif %}</div>
   </div>
+  <span class="spacer"></span>
+  <a class="btn" href="{% url 'backup' %}" title="Descarcă toate datele din Firebase">{% icon 'download' 16 %} Backup complet</a>
 </div>
 
 {% if activity %}
 <div class="chips">
   <span class="muted small" style="align-self:center">Ultimele 30 de zile:</span>
-  {% for a in activity %}<a class="chip" href="?user={{ a.username|urlencode }}">{{ a.username }} <b>{{ a.n }}</b></a>{% endfor %}
+  {% for name, n in activity %}<a class="chip" href="?user={{ name|urlencode }}">{{ name }} <b>{{ n }}</b></a>{% endfor %}
 </div>
 {% endif %}
 
@@ -23,7 +25,7 @@
   <div><label>Ce</label>
     <select class="input" name="target"><option value="">Tot</option>{% for t in targets %}<option{% if t == f.target %} selected{% endif %}>{{ t }}</option>{% endfor %}</select></div>
   <div><label>Angajat</label>
-    <select class="input" name="emp"><option value="">Toți</option>{% for e in employees %}<option value="{{ e.id }}"{% if f.emp == e.id|stringformat:'s' %} selected{% endif %}>{{ e.name }}</option>{% endfor %}</select></div>
+    <select class="input" name="emp"><option value="">Toți</option>{% for id, name in employees %}<option value="{{ id }}"{% if f.emp == id %} selected{% endif %}>{{ name }}</option>{% endfor %}</select></div>
   <div><label>De la</label><input class="input" type="date" name="from" value="{{ f.from }}"></div>
   <div><label>Până la</label><input class="input" type="date" name="to" value="{{ f.to }}"></div>
   <div><label>Caută</label><input class="input" type="search" name="q" value="{{ f.q }}" placeholder="ex: 12.10"></div>

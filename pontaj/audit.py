@@ -1,7 +1,6 @@
-from django.contrib.auth.signals import user_logged_in
-from django.dispatch import receiver
+from django.utils import timezone
 
-from .models import AuditLog
+from . import store
 
 
 def client_ip(request):
@@ -9,24 +8,18 @@ def client_ip(request):
     return forwarded.split(',')[0].strip() if forwarded else request.META.get('REMOTE_ADDR')
 
 
-def log(request, action, target, summary, employee=None, before='', after='', user=None):
-    if user is None:
-        user = getattr(request, 'user', None)
-    if user is not None and not user.is_authenticated:
-        user = None
-    AuditLog.objects.create(
-        user=user,
-        username=user.username if user else 'anonim',
-        action=action,
-        target=target,
-        employee=employee,
-        summary=summary[:300],
-        before=str(before or '')[:200],
-        after=str(after or '')[:200],
-        ip=client_ip(request),
-    )
-
-
-@receiver(user_logged_in)
-def _log_login(sender, request, user, **kwargs):
-    log(request, AuditLog.Action.LOGIN, 'cont', f'{user.username} s-a autentificat', user=user)
+def log(request, action, target, summary, employee=None, before='', after=''):
+    """Scrie in istoric cine a facut ce. `action`: create | update | delete | login | export."""
+    user = getattr(request, 'user', None)
+    store.add_log({
+        'when': timezone.now().isoformat(timespec='seconds'),
+        'user': user.username if user and user.is_authenticated else 'anonim',
+        'action': action,
+        'target': target,
+        'emp': employee.id if employee else None,
+        'emp_name': employee.name if employee else None,
+        'summary': summary[:300],
+        'before': str(before or '')[:200] or None,
+        'after': str(after or '')[:200] or None,
+        'ip': client_ip(request),
+    })

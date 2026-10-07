@@ -1,0 +1,20 @@
+# Render Blueprint: New > Blueprint > alege repo-ul. Valorile marcate sync:false le completezi in dashboard.
+services:
+  - type: web
+    name: unda-pontaj
+    runtime: python
+    plan: free
+    region: frankfurt
+    buildCommand: pip install -r requirements.txt && python manage.py collectstatic --noinput
+    startCommand: python manage.py bootstrap_accounts && gunicorn config.wsgi --workers 2 --threads 4 --timeout 60
+    envVars:
+      - key: DJANGO_DEBUG
+        value: "0"
+      - key: DJANGO_SECRET_KEY
+        generateValue: true
+      - key: FIREBASE_DB_URL
+        value: https://pontajunda-default-rtdb.europe-west1.firebasedatabase.app
+      - key: FIREBASE_SERVICE_ACCOUNT  # continutul fisierului JSON de service account
+        sync: false
+      - key: SUPERADMIN_PASSWORD       # folosit doar la prima pornire, ca sa creeze contul superadmin
+        sync: false

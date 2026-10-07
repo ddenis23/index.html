@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 
 from django.utils import timezone
 
-from .models import SP_VALUE, Code, Employee, Entry, SummerBonus
+from .store import SP_VALUE, Code
 
 MONTHS = ['Ianuarie', 'Februarie', 'Martie', 'Aprilie', 'Mai', 'Iunie', 'Iulie',
           'August', 'Septembrie', 'Octombrie', 'Noiembrie', 'Decembrie']
@@ -167,14 +167,8 @@ class Grid:
                  'we': d.weekday() >= 5, 'today': d == now} for d in self.days]
 
 
-def _employees_in(first, last, shift=0, section=None):
-    qs = Employee.objects.select_related('section').filter(start_from__lte=last)
-    qs = qs.exclude(inactive_from__lte=first)
-    if shift:
-        qs = qs.filter(shift=shift)
-    if section:
-        qs = qs.filter(section=section)
-    return list(qs)
+def employees_in(data, first, last, shift=0):
+    return [e for e in data.employees if e.is_active_in(first, last) and (not shift or e.shift == shift)]
 
 
 def build_row(employee, days, entries, bonus=''):
@@ -191,25 +185,13 @@ def build_row(employee, days, entries, bonus=''):
     return Row(employee, cells, stats, bonus)
 
 
-def _entries_map(employees, first, last):
-    qs = Entry.objects.filter(employee__in=employees, day__range=(first, last))
-    return {(e.employee_id, e.day): e for e in qs}
-
-
-def _bonus_map(employees, month_start):
-    qs = SummerBonus.objects.filter(employee__in=employees, month=month_start)
-    return {b.employee_id: b.code for b in qs}
-
-
-def build_grid(days, shift=0, with_bonus=False, employees=None):
-    first, last = days[0], days[-1]
+def build_grid(data, days, shift=0, with_bonus=False, employees=None):
     if employees is None:
-        employees = _employees_in(first, last, shift)
-    entries = _entries_map(employees, first, last)
-    bonuses = _bonus_map(employees, first.replace(day=1)) if with_bonus else {}
+        employees = employees_in(data, days[0], days[-1], shift)
+    month_key = f'{days[0]:%Y-%m}'
     grid = Grid(days=days, with_bonus=with_bonus)
     for s in (1, 2):
-        rows = [build_row(e, days, entries, bonuses.get(e.id, ''))
+        rows = [build_row(e, days, data.entries, data.bonuses.get((e.id, month_key), '') if with_bonus else '')
                 for e in employees if e.shift == s]
         if rows:
             grid.groups.append((s, rows))
@@ -218,17 +200,7 @@ def build_grid(days, shift=0, with_bonus=False, employees=None):
     return grid
 
 
-def single_row(employee, days, with_bonus):
-    """Randul unui singur angajat, folosit dupa editarea unei celule."""
-    entries = _entries_map([employee], days[0], days[-1])
-    bonus = _bonus_map([employee], days[0].replace(day=1)).get(employee.id, '') if with_bonus else ''
-    return build_row(employee, days, entries, bonus)
-
-
-def month_stats(year, month, employees=None):
-    """{employee_id: Stats} pentru o luna, inclusiv bonusul de vara."""
-    days = month_days(year, month)
-    if employees is None:
-        employees = _employees_in(days[0], days[-1])
-    grid = build_grid(days, with_bonus=True, employees=employees)
+def month_stats(data, year, month):
+    """({employee_id: Row}, Grid) pentru o luna, inclusiv bonusul de vara."""
+    grid = build_grid(data, month_days(year, month), with_bonus=True)
     return {r.employee.id: r for r in grid.rows}, grid

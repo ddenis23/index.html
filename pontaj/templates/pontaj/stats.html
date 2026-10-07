@@ -66,8 +66,8 @@
     <div class="card-title">Concedii neaprobate</div>
     {% if pending_co %}
     <ul class="attention">
-      {% for e in pending_co %}
-      <li><span>{{ e.employee.name }}</span><span class="muted">{{ e.day|date:'D d.m.Y' }}</span></li>
+      {% for emp, day in pending_co %}
+      <li><span>{{ emp.name }}</span><span class="muted">{{ day|date:'D d.m.Y' }}</span></li>
       {% endfor %}
     </ul>
     {% else %}<p class="muted">Niciun concediu în așteptare.</p>{% endif %}

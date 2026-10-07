@@ -20,7 +20,7 @@
         <td><div class="who"><span class="avatar">{{ u.username|slice:":2"|upper }}</span><div>{{ u.username }}{% if u.first_name %}<div class="muted small" style="font-weight:400">{{ u.get_full_name }}</div>{% endif %}</div></div></td>
         <td><span class="act {% if role == 'superadmin' %}delete{% elif role == 'admin' %}update{% else %}login{% endif %}">{{ role|capfirst }}</span>{% if not u.is_active %} <span class="muted small">dezactivat</span>{% endif %}</td>
         <td class="hide-sm muted">{{ u.last_login|date:'d.m.Y H:i'|default:'niciodată' }}</td>
-        <td class="actions"><a class="btn sm ghost" href="{% url 'user_edit' u.id %}">Editează</a></td>
+        <td class="actions"><a class="btn sm ghost" href="{% url 'user_edit' u.username %}">Editează</a></td>
       </tr>
     {% endfor %}
     </tbody>

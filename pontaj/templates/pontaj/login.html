@@ -16,11 +16,11 @@
       <span class="brand-mark">{% icon 'wave' 18 %}</span>
       <span>Unda<small>Pontaj bucătărie</small></span>
     </div>
-    {% if form.non_field_errors %}<div class="alert error">Utilizator sau parolă greșită.</div>{% endif %}
+    {% if error %}<div class="alert error">Utilizator sau parolă greșită.</div>{% endif %}
     <div class="field">
       <label for="id_username">Utilizator</label>
       <input type="text" name="username" id="id_username" autocomplete="username" autocapitalize="none"
-             value="{{ form.username.value|default:'' }}" required autofocus>
+             value="{{ username }}" required autofocus>
       <div class="help">Angajații intră cu <b>angajat</b>.</div>
     </div>
     <div class="field">

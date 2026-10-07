@@ -1,11 +1,13 @@
 import getpass
 
-from django.contrib.auth.models import User
+from django.contrib.auth.hashers import make_password
 from django.core.management.base import BaseCommand, CommandError
+
+from pontaj import store
 
 
 class Command(BaseCommand):
-    help = 'Creeaza sau reseteaza contul de superadmin (vede istoricul si gestioneaza conturile).'
+    help = 'Creeaza sau reseteaza un cont de superadmin (vede istoricul si gestioneaza conturile).'
 
     def add_arguments(self, parser):
         parser.add_argument('--username', default='superadmin')
@@ -15,9 +17,7 @@ class Command(BaseCommand):
         password = opts['password'] or getpass.getpass('Parola superadmin: ')
         if len(password) < 6:
             raise CommandError('Parola trebuie sa aiba minim 6 caractere.')
-        user, created = User.objects.get_or_create(username=opts['username'])
-        user.is_superuser = user.is_staff = user.is_active = True
-        user.first_name = user.first_name or 'Superadmin'
-        user.set_password(password)
-        user.save()
-        self.stdout.write(self.style.SUCCESS(f'Superadmin {"creat" if created else "actualizat"}: {user.username}'))
+        user = store.get_user(opts['username']) or store.User(opts['username'], name='Superadmin')
+        user.role, user.active, user.password = 'superadmin', True, make_password(password)
+        store.save_user(user)
+        self.stdout.write(self.style.SUCCESS(f'Superadmin salvat: {user.username}'))
